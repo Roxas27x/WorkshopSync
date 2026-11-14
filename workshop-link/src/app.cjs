@@ -4,8 +4,9 @@ const {pathToFileURL}=require('node:url');
 const {parseInput,id,gameId,eligible}=require('./core.cjs');
 const {Steam,scanLibraries,resolveLibraryRoot,delay}=require('./steam.cjs');
 const {ownSubscriptions,ownFriends}=require('./community.cjs');
+const {refreshFriendRoster}=require('./friend-sharing.cjs');
 const {storeInfo,gameIcon,visibleGames,confirmedWorkshop}=require('./catalog.cjs');
-const {newGame,migrate,sharingPayload,resetAccount,applySharingDefaults,connectSharing,disconnectSharing}=require('./state.cjs');
+const {newGame,migrate,resetAccount,applySharingDefaults,connectSharing,disconnectSharing}=require('./state.cjs');
 const {Relay,origin}=require('./relay.cjs');
 const {selectIdentity,assertSameAccount}=require('./identity.cjs');
 const FriendItems=require('./friend-items.js');
@@ -172,13 +173,8 @@ async function refreshGameFriends(g,{refreshSteamFriends=false}={}){
 async function updateService({refreshSteamFriends=false}={}){
  const auth=await account();if(!auth||!relay.token||relay.steamid!==auth.steamid)throw new Error('Connect companion friend sharing first.');
  connectSharing(state);
- let refreshable=true;
- if(refreshSteamFriends||!state.friendsCheckedAt||Date.now()-state.friendsCheckedAt>10*60000){try{state.friends=await ownFriends(steam,auth.steamid);state.friendsCheckedAt=Date.now();state.friendReadError='';}catch(error){state.friendReadError=error.message;refreshable=!state.friends.length;}}
- const capabilities=await relay.request('/v1/health',{token:null});if(capabilities.sharingVersion!==2||capabilities.privateItemsVersion!==1)throw new Error('The sync service needs an update before private subscriptions can be protected.');
- const payload=sharingPayload(state);if(!refreshable){payload.friends=[];payload.games=[];}
- await relay.request('/v1/profile',{method:'PUT',body:payload});
- const registered=await relay.request('/v1/friends');state.sharedGameStats=Array.isArray(registered.sharedGameStats)?registered.sharedGameStats:[];const lookup=new Map(registered.friends.map(x=>[x.steamid,x]));
- state.friends=state.friends.map(f=>({...f,companion:lookup.has(f.id),games:lookup.get(f.id)?.games||[]}));
+ const registered=await refreshFriendRoster(state,{readFriends:()=>ownFriends(steam,auth.steamid),request:(...args)=>relay.request(...args),refreshSteamFriends});
+ const lookup=new Map(registered.friends.map(friend=>[friend.steamid,friend]));
  for(const friend of registered.friends)for(const shared of friend.games){
   const g=ensureGame(shared.appid,shared.name);
   if(!g.workshop){

@@ -1,11 +1,35 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
-const {parseSubscriptions,parseFriends,ownSubscriptions}=require('../src/community.cjs');
+const {parseSubscriptions,parseFriends,ownSubscriptions,ownFriends}=require('../src/community.cjs');
 const {readSubscriptionCache,resolveLibraryRoot,Steam}=require('../src/steam.cjs');
 const {migrate,sharingPayload,resetAccount,newGame,connectSharing,applySharingDefaults,disconnectSharing}=require('../src/state.cjs');
 const SELF='76561198000000001',OTHER='76561198000000002';
 const row=(id,app='311210')=>`<div class="workshopItemSubscription" id="Subscription${id}"><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=${id}"><div class="workshopItemTitle">Map &amp; More ${id}</div></a><div class="workshopItemApp">Black Ops III</div><span onclick="ToggleSubscribed(${id}, ${app});"></span></div><div class="workshopItemSubscription" id="Unsubscribed${id}" style="display:none"><div class="workshopItemTitle">Hidden duplicate</div></div>`;
 const page=(items,total=items.length,next=null)=>`<script>var g_steamID = '${SELF}';</script><div id="leftContents">${items.map(x=>row(...x)).join('')}<div class="workshopBrowsePagingInfo">Showing 1-${items.length} of ${total} entries</div><div class="workshopBrowsePagingControls">${next?`<a href="?p=${next}&browsefilter=mysubscriptions">Next</a>`:''}</div></div>`;
+const friendPage=(owner=SELF,publicProfile=true)=>`<script>${publicProfile?`g_rgProfileData = {"steamid":"${owner}"};`:`g_steamID='${owner}';`}</script><div class="profile_friends"><div class="friend_block_v2" data-steamid="${OTHER}"><div class="friend_block_content">Alex</div></div></div>`;
+const response=(html,status=200)=>({ok:status===200,status,text:async()=>html});
+
+test('an expired saved Steam cookie falls back to the verified public friend profile',async()=>{
+ let publicReads=0;const steam={auth:async()=>({steamid:SELF}),ses:{fetch:async()=>response('<div>Sign in to Steam</div>')}};
+ const friends=await ownFriends(steam,SELF,{publicFetch:async url=>{assert.equal(url,`https://steamcommunity.com/profiles/${SELF}/friends/?l=english`);publicReads++;return response(friendPage());}});
+ assert.equal(publicReads,1);assert.deepEqual(friends.map(friend=>friend.id),[OTHER]);
+});
+test('valid private friend access does not make a public profile request',async()=>{
+ const steam={auth:async()=>({steamid:SELF}),ses:{fetch:async()=>response(friendPage(SELF,false))}};
+ const friends=await ownFriends(steam,SELF,{publicFetch:async()=>{assert.fail('Private access already succeeded');}});assert.equal(friends.length,1);
+});
+test('public fallback rejects the wrong profile and never turns a private profile into an empty roster',async()=>{
+ const steam={auth:async()=>({steamid:SELF}),ses:{fetch:async()=>response('<div>Sign in</div>')}};
+ for(const html of [friendPage(OTHER),'<div>This profile is private</div>'])await assert.rejects(()=>ownFriends(steam,SELF,{publicFetch:async()=>response(html)}),error=>error.code==='STEAM_WEB_AUTH_REQUIRED'&&/Previous friends were kept/.test(error.message));
+});
+test('a failed private friend request can recover through the public profile',async()=>{
+ const steam={auth:async()=>({steamid:SELF}),ses:{fetch:async()=>response('',503)}};
+ assert.equal((await ownFriends(steam,SELF,{publicFetch:async()=>response(friendPage())})).length,1);
+});
+test('a different Steam Community account is not used to read the connected account friends',async()=>{
+ const steam={auth:async()=>({steamid:OTHER}),ses:{fetch:async()=>{assert.fail('Must not read the other account friends');}}};
+ assert.equal((await ownFriends(steam,SELF,{publicFetch:async()=>response(friendPage())})).length,1);
+});
 test('public friends are bound to the requested profile without a companion sign-in',()=>{const html=`<script>g_rgProfileData = {"steamid":"${SELF}"};</script><div class="profile_friends"><div class="friend_block_v2" data-steamid="${OTHER}"><div class="friend_block_content">Alex</div></div></div>`;assert.equal(parseFriends(html,SELF,{publicProfile:true})[0].name,'Alex');assert.throws(()=>parseFriends(html,OTHER,{publicProfile:true}),/requested public friend profile/);assert.throws(()=>parseFriends('<div>This profile is private</div>',SELF,{publicProfile:true}),/Previous friends were kept/);});
 test('direct subscriptions are parsed without a collection and hidden unsubscribe templates are ignored',()=>{const result=parseSubscriptions(page([['1'],['2','2567870']]),SELF);assert.equal(result.rows.length,2);assert.equal(result.rows[0].title,'Map & More 1');assert.equal(result.rows[1].appid,'2567870');});
 test('pagination is followed, all pages are counted and subscriptions remain grouped by game',async()=>{const pages=[page([['1']],2,2),page([['2','2567870']],2)];const steam={auth:async()=>({steamid:SELF}),ses:{fetch:async()=>({ok:true,text:async()=>pages.shift()})}};const result=await ownSubscriptions(steam,SELF);assert.equal(result.length,2);assert.deepEqual(result.map(x=>x.appid),['311210','2567870']);});

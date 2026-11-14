@@ -90,6 +90,10 @@ app.whenReady().then(async()=>{
  await run('Array.from(document.querySelectorAll(".quick-sync")).find(e=>e.dataset.id==="294100").click()');await wait();
  await check('window.workshop.action("state").then(r=>r.data.games.every(g=>!g.sync))','The sidebar switch can turn the same game off without affecting others');
  await check('document.querySelectorAll(".connected-friend").length===2&&!document.querySelector("#friends-sidebar").textContent.includes("Not connected to the app")','Only connected app friends appear in the sidebar');
+ await run('state.friendReadError="Steam friend refresh failed. Previous friends were kept.";renderFriendsSidebar()');
+ await check('document.querySelectorAll(".connected-friend").length===2&&document.querySelector("#friends-sidebar [role=status]").textContent.includes("Previous friends were kept")&&document.querySelector("#friends-sidebar [data-action=authorizeSteam]").textContent==="Reconnect Steam"','A failed friend refresh explains recovery while showing existing permitted connections');
+ await run('state.friendReadError="";renderFriendsSidebar()');
+ await check('!document.querySelector("#friends-sidebar [role=status]")','The friend refresh warning clears after recovery');
  await run('document.querySelector(".connected-friend").click()');await wait();
  await check('document.querySelector("#dialog-title").textContent==="Alex Companion"&&document.querySelector("[data-action=browseFriend]").textContent.includes("Project Zomboid")','A connected friend opens their shared games');
  await run('document.querySelector("[data-action=browseFriend]").click()');await wait();

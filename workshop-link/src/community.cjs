@@ -58,10 +58,22 @@ async function ownSubscriptions(steam,expected,onPage=()=>{}){
   if(total!==null && all.size!==total)throw new Error(`Steam reported ${total} subscriptions but returned ${all.size}. Previous data was kept.`);
   return [...all.values()];
 }
-async function ownFriends(steam,expected){
+async function ownFriends(steam,expected,{publicFetch=fetch}={}){
   const auth=await steam.auth();const privateAccess=auth?.steamid===expected;
-  const response=privateAccess?await steam.ses.fetch('https://steamcommunity.com/my/friends/?l=english',{signal:AbortSignal.timeout(30000)}):await fetch(`https://steamcommunity.com/profiles/${expected}/friends/?l=english`,{signal:AbortSignal.timeout(30000)});
-  if(!response.ok)throw new Error(`Steam friend list returned HTTP ${response.status}.`);
-  try{return parseFriends(await response.text(),expected,{publicProfile:!privateAccess});}catch(error){if(!privateAccess)throw new Error('Your Steam friend list is private or unavailable. Authorize Steam Community access to refresh it. Previous friends were kept.');throw error;}
+  if(privateAccess){
+    try{
+      const response=await steam.ses.fetch('https://steamcommunity.com/my/friends/?l=english',{signal:AbortSignal.timeout(30000)});
+      if(!response.ok)throw new Error(`Steam friend list returned HTTP ${response.status}.`);
+      return parseFriends(await response.text(),expected);
+    }catch{
+      // A saved cookie can outlive Steam's server session. The public profile
+      // still proves whose friends we read, without requiring another login.
+    }
+  }
+  const response=await publicFetch(`https://steamcommunity.com/profiles/${expected}/friends/?l=english`,{signal:AbortSignal.timeout(30000)});
+  if(!response.ok)throw new Error(`Steam friend list returned HTTP ${response.status}. Previous friends were kept.`);
+  try{return parseFriends(await response.text(),expected,{publicProfile:true});}catch{
+    const error=new Error('Your Steam friend list is private or unavailable. Authorize Steam Community access to refresh it. Previous friends were kept.');error.code='STEAM_WEB_AUTH_REQUIRED';throw error;
+  }
 }
 module.exports={signedIn,parseSubscriptions,parseFriends,ownSubscriptions,ownFriends};

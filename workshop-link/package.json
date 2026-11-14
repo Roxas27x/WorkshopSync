@@ -1,7 +1,7 @@
 {
   "name": "workshop-link",
   "productName": "WorkshopSync",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "description": "Share and synchronize Steam Workshop mods with friends",
   "main": "src/app.cjs",
