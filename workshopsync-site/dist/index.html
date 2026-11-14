@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A Windows companion for Steam Workshop. Organize named mod lists, share with selected friends, and choose which games to keep in sync.">
+  <meta name="theme-color" content="#111923">
+  <meta property="og:title" content="WorkshopSync — Steam Workshop, together.">
+  <meta property="og:description" content="Named mod lists. Selected friends. Your choice of what stays in sync. A Windows companion for Steam Workshop.">
+  <meta property="og:image" content="https://workshopsync.pages.dev/screens/lists.png">
+  <meta property="og:url" content="https://workshopsync.pages.dev/">
+  <link rel="canonical" href="https://workshopsync.pages.dev/">
+  <title>WorkshopSync — Steam Workshop, together.</title>
+  <link rel="icon" type="image/png" href="/icon.png">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header wrap">
+    <a class="wordmark" href="/" aria-label="WorkshopSync home"><img src="/icon.png" width="38" height="38" alt=""><span>Workshop<span class="brand-sync">Sync</span></span></a>
+    <nav aria-label="Main navigation"><a href="#inside">Inside the app</a><a href="#how-it-works">How it works</a><a href="#download-details">Download <span aria-hidden="true">↓</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="overline">A companion for Steam Workshop</p>
+        <h1 id="hero-title">Your next game night.<br>The same mod list.</h1>
+        <p class="intro">See what your friends are subscribed to. Put together a list for each group, install what you want, and choose which games to keep in sync.</p>
+        <div class="hero-actions"><a class="button primary" href="/download" id="download-button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></svg> Download for Windows</a><a class="quiet-link" href="#inside">Take a look inside <span aria-hidden="true">↘</span></a></div>
+        <p class="release-line" id="release-line" role="status">Checking the latest release…</p>
+      </div>
+      <aside class="release-brief" aria-label="At a glance"><span class="brief-label">WORKSHOPSYNC / WINDOWS</span><p>Keep the list.<br>Skip the link dump.</p><dl><div><dt>Works with</dt><dd>Workshop-enabled games</dd></div><div><dt>Requires</dt><dd>Windows 10 / 11 · x64</dd></div><div><dt>Collections</dt><dd>Not required</dd></div></dl><a href="#release"><span>New in <span data-release-version>0.7.0</span></span><span aria-hidden="true">↗</span></a></aside>
+    </section>
+    <section class="showcase wrap" id="inside" aria-labelledby="inside-title">
+      <div class="showcase-heading"><h2 id="inside-title">Inside WorkshopSync.</h2><span class="sample-label">Actual app · Sample library</span></div>
+      <div class="preview-tabs" role="tablist" aria-label="App previews">
+        <button type="button" id="tab-lists" role="tab" aria-selected="true" aria-controls="app-preview" data-preview="lists">01 <span>Mod lists</span></button>
+        <button type="button" id="tab-friends" role="tab" aria-selected="false" aria-controls="app-preview" tabindex="-1" data-preview="friends">02 <span>Friends</span></button>
+        <button type="button" id="tab-sharing" role="tab" aria-selected="false" aria-controls="app-preview" tabindex="-1" data-preview="sharing">03 <span>Sharing</span></button>
+        <button type="button" id="tab-light" role="tab" aria-selected="false" aria-controls="app-preview" tabindex="-1" data-preview="light">04 <span>Appearance</span></button>
+      </div>
+      <figure class="app-preview" id="app-preview" role="tabpanel" aria-labelledby="tab-lists" tabindex="0"><a id="preview-full" href="/screens/lists.png" target="_blank" rel="noopener" aria-label="Open full-size app screenshot"><img id="preview-image" src="/screens/lists.png" width="1280" height="880" alt="WorkshopSync My lists view, with the Friday co-op list and selection actions above the mod table." fetchpriority="high"></a><figcaption><p id="preview-caption">A separate list for every group. Select a whole row, then add those mods to the list you choose.</p><a id="preview-expand" href="/screens/lists.png" target="_blank" rel="noopener">Full size <span aria-hidden="true">↗</span></a></figcaption></figure>
+    </section>
+    <section class="features wrap" aria-labelledby="features-title">
+      <div class="section-intro"><p class="overline">Lists &amp; friend groups</p><h2 id="features-title">Made for more than <br>one group of friends.</h2><p>You shouldn’t have to rebuild a collection or send another wall of links whenever the plan changes.</p></div>
+      <div class="feature-list">
+        <article><span class="index">01</span><div><h3>Give each setup a name.</h3><p>Friday co-op, a test server, or a few extras for another group. Keep multiple lists per game and share each with the friends you choose. New lists start private.</p></div></article>
+        <article><span class="index">02</span><div><h3>Choose a few friends. Or everyone.</h3><p>Browse one friend, a hand-picked group, or all compatible friends. Pick individual mods or install all available items from that group in one action.</p></div></article>
+        <article><span class="index">03</span><div><h3>Keep up at your own pace.</h3><p>Install a list once, or follow future additions. Each game has its own Auto-sync switch in the sidebar. Activity shows who added a mod and when local files were detected.</p></div></article>
+        <article><span class="index">04</span><div><h3>A library that stays useful.</h3><p>Find Workshop games by latest played or items shared between friends. Unavailable mods stay hidden by default. Choose from five color palettes, with dark, light, or system appearance.</p></div></article>
+      </div>
+    </section>
+    <section class="release-section wrap" id="release" aria-labelledby="release-title"><div><p class="overline">The current release</p><h2 id="release-title">What’s new in <span data-release-version>0.7.0</span></h2><p id="release-notes">Select mods by clicking the whole row, with selection actions above the list. Create named mod lists, share each with selected friends, and browse or follow custom friend groups.</p></div><p class="update-note">Already installed?<br><strong>Open Settings → Updates &amp; about.</strong><br>Download the update, then restart when you’re ready. Your saved mods and game preferences carry over.</p></section>
+    <section class="getting-started wrap" id="how-it-works" aria-labelledby="how-title"><div class="section-heading"><p class="overline">How it works</p><h2 id="how-title">Install once. Then get your friends connected.</h2></div><ol class="steps"><li><span class="step-num">1</span><h3>Connect Steam &amp; friends</h3><p>Confirm your Steam identity in your existing browser. Friends appear once they’ve connected to WorkshopSync too.</p></li><li><span class="step-num">2</span><h3>Choose your mods</h3><p>Browse subscriptions and named lists, or paste Workshop links someone sent you. Collections and favorites aren’t needed.</p></li><li><span class="step-num">3</span><h3>Install or keep in sync</h3><p>Install your selection once. For future additions, choose friends or lists to follow and enable Auto-sync for that game. Steam manages the downloads.</p></li></ol></section>
+    <section class="download-section wrap" id="download-details" aria-labelledby="download-title">
+      <div class="download-copy"><img src="/icon.png" width="72" height="72" alt="" loading="lazy"><p class="overline">The Windows app</p><h2 id="download-title">Get WorkshopSync.</h2><p>A regular installer for your Windows account. Updates arrive inside the app, so your friends can keep using the same installation.</p><a class="button primary" href="/download">Download for Windows <span aria-hidden="true">↓</span></a><button type="button" class="copy-link" id="copy-download">Copy download link</button><span class="copy-status" id="download-copy-status" role="status"></span><p class="beta-note">Windows 10 / 11 · 64-bit · Beta<br>This beta has no Windows publisher certificate yet. Windows may show an unknown-publisher warning.</p></div>
+      <div class="release-details"><div class="release-card-title"><h3>Release details</h3><span id="release-version">Checking…</span></div><dl><div><dt>Package</dt><dd>Windows installer (.exe)</dd></div><div><dt>Installation</dt><dd>Your Windows user</dd></div><div><dt>Download size</dt><dd id="release-size">Checking…</dd></div><div><dt>Published</dt><dd id="release-date">Checking…</dd></div></dl><div class="checksum"><div><span>SHA-256</span><button id="copy-checksum" type="button" disabled>Copy checksum</button></div><code id="release-checksum">Checking the current installer…</code><span id="copy-status" role="status"></span></div><p class="release-status" id="release-status" role="status">Loading release details.</p></div>
+    </section>
+    <section class="questions wrap" aria-labelledby="questions-title"><h2 id="questions-title">A few things to know.</h2><div class="answers"><details><summary>What can my friends see?</summary><p>Connecting friend sharing enables subscription sharing for Workshop games by default. You can limit the game’s audience or turn sharing off in its Sharing menu. New named lists start private, and each list can be shared with all connected friends or selected friends. A private list does not hide items already shared through your subscription inventory. Local download history stays on your PC.</p></details><details><summary>Will this start installing every new mod?</summary><p>Automatic synchronization starts off for every game. Browsing, selecting, and one-time installs don’t turn it on. To keep up automatically, follow the friends or lists you want and separately enable that game’s Auto-sync switch.</p></details><details><summary>Do both players need the app?</summary><p>Both players need WorkshopSync to browse each other’s shared subscriptions and lists. If a friend doesn’t use it, you can still paste the Workshop links they send and subscribe to the items together.</p></details><details><summary>What does “compatible friends” mean?</summary><p>Steam friends who have connected to WorkshopSync and are sharing items for the selected game. It doesn’t check whether mods work together. Dependencies, load order, and game versions still depend on the game.</p></details><details><summary>How are updates checked?</summary><p>The app checks on startup and hourly while open. Each update is checked against a signed release catalog and installer checksums before it can run. This is separate from a Windows publisher certificate. Choose Download update, then Restart &amp; update when you’re ready.</p></details><details><summary>Is WorkshopSync made by Valve?</summary><p>No. WorkshopSync is an independent companion and is not affiliated with Valve. Steam and Steam Workshop belong to Valve. Workshop items remain the work of their respective creators.</p></details></div></section>
+  </main>
+  <footer class="wrap"><a class="wordmark" href="/"><img src="/icon.png" width="27" height="27" alt=""><span>Workshop<span class="brand-sync">Sync</span></span></a><span>Independent companion for Steam Workshop.</span><a href="#main">Back to top ↑</a></footer>
+</body>
+</html>
+
+
+

@@ -1,0 +1,4 @@
+# Preserve the exact release snapshot, including its existing line endings.
+* -text
+*.png binary
+*.ico binary

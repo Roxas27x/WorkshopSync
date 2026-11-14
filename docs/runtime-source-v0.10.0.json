@@ -1,0 +1,210 @@
+{
+  "version": "0.10.0",
+  "description": "SHA-256 hashes of the 51 runtime files used for the official v0.10.0 installer. Public-repository license, documentation, and packaging metadata additions do not change these files.",
+  "files": [
+    {
+      "path": "workshop-link/src/activity.cjs",
+      "sha256": "63f1103702f9892d7b3609ed8bb7a12f5909ed798c7f928be54927a6dd408779"
+    },
+    {
+      "path": "workshop-link/src/app-log.js",
+      "sha256": "8851105095847192ac067df7b2bdb16e05747ba987cb94598cefad4a079baeb5"
+    },
+    {
+      "path": "workshop-link/src/app-updates.cjs",
+      "sha256": "8bf7e842c112ad6aff7d84ac9527bac55e832492d744e4aa138e81b291b55fc6"
+    },
+    {
+      "path": "workshop-link/src/app.cjs",
+      "sha256": "f479438ce1a484f11a54e4a56bdac0c4544296bef4a8ac1dfe752da67ca19d0d"
+    },
+    {
+      "path": "workshop-link/src/assets/workshopsync.ico",
+      "sha256": "2e2fb2666c2ff28d88dbb255adcad7669cc09e4a2e321496bea8894c93308624"
+    },
+    {
+      "path": "workshop-link/src/assets/workshopsync.png",
+      "sha256": "0e76332711a3836433c8ff2f2205b609de35a9afc06ba0928aeb4b3b1a6ce10b"
+    },
+    {
+      "path": "workshop-link/src/auto-sync-blacklist.js",
+      "sha256": "6828b1d18bdfe92059784860e74d1d7e99909b124a03bb64921288bb09370950"
+    },
+    {
+      "path": "workshop-link/src/availability.js",
+      "sha256": "7d95f8c874d3c2001e28e1f442234b23be179d03e3485aaa8b598f12b87c886b"
+    },
+    {
+      "path": "workshop-link/src/brand-config.json",
+      "sha256": "9fe1defbf94e4b83a3e2238993b9de23bcb823ce1ee032e2cac00b5b51a8b473"
+    },
+    {
+      "path": "workshop-link/src/catalog.cjs",
+      "sha256": "f2b51562aa2a12b480c5dc77ce1afb0029809f4bfe28c23b09a138eb8bae9b2b"
+    },
+    {
+      "path": "workshop-link/src/community.cjs",
+      "sha256": "a4e7c9ab4798e53b99873c02f939d150d70b951946890d358232398103a47949"
+    },
+    {
+      "path": "workshop-link/src/companion-friends.js",
+      "sha256": "c43500eaf3e8d056122a3bced395ceb411445b45fc1ca23164025e61a5d434c4"
+    },
+    {
+      "path": "workshop-link/src/core.cjs",
+      "sha256": "9123a11a681e59fa8d65bf2a844c6f007f4784a1116127fa146fb7f05d10e4ed"
+    },
+    {
+      "path": "workshop-link/src/friend-items.js",
+      "sha256": "a3d1a67a516d84041e69f2e648bb15a854aaf68c2b471e953159b9a3c36b8e65"
+    },
+    {
+      "path": "workshop-link/src/game-library.js",
+      "sha256": "bf458fcfd6f406b198f5f9750da17a6cef1876207da8d919d6fc1b9e685759f8"
+    },
+    {
+      "path": "workshop-link/src/identity.cjs",
+      "sha256": "d015ea12248e8adec6139ed6104b57db4fdb296d469302961a6f1b2ed09f29c5"
+    },
+    {
+      "path": "workshop-link/src/index.html",
+      "sha256": "b25470210acb0b6f51669e25fabd66c7906ecc062ccbbe07e45cfe20dac59e07"
+    },
+    {
+      "path": "workshop-link/src/install-review.cjs",
+      "sha256": "e9767003527cec27066a6134254c4b60dac7457f663c6855c3d9bea976c804e9"
+    },
+    {
+      "path": "workshop-link/src/item-privacy.js",
+      "sha256": "dcb634234134ed7280dc4c2042b4511e2e6292b61182ca6dc06b4aefafca5233"
+    },
+    {
+      "path": "workshop-link/src/legacy-workshop.cjs",
+      "sha256": "be72c6a90632b7251da2c508bdaa7381765f7810f56817c4d2acff7ad24e2444"
+    },
+    {
+      "path": "workshop-link/src/mod-delete.cjs",
+      "sha256": "ff1d1b6f88f71c8da69d2488c8f681fa557253d59ecd6d69f526de7d0761756e"
+    },
+    {
+      "path": "workshop-link/src/mod-lists.js",
+      "sha256": "6df19c2ce9d1c1a9d7b59de7497edc64ece9353256d293db24990da44052293c"
+    },
+    {
+      "path": "workshop-link/src/mod-relations.cjs",
+      "sha256": "4471fe73579649121de575408df3b97761b50fd77dec23072362beb0af98126b"
+    },
+    {
+      "path": "workshop-link/src/preload.cjs",
+      "sha256": "cd35645384e0508958c42b1d2a06a7406c1c3147fb4f6b85b5429756430895e3"
+    },
+    {
+      "path": "workshop-link/src/relay.cjs",
+      "sha256": "e8a7268fbb95be651b65685f6abb48843f88a5bac110851828792cb8e5b20570"
+    },
+    {
+      "path": "workshop-link/src/release-crypto.cjs",
+      "sha256": "01df3cbb88775cd92afc9952ce8de4c68dc8f1581ba8175fcb6bba063b330389"
+    },
+    {
+      "path": "workshop-link/src/release-format.cjs",
+      "sha256": "50770a259b4b199841b5e749a19ab6bbd3dcdeee2f20700b756afd690f65618b"
+    },
+    {
+      "path": "workshop-link/src/renderer-activity.js",
+      "sha256": "17ad664ecc199724b3b7e0a650ac447b66732331bdebfe0f12db9f3a49d14cac"
+    },
+    {
+      "path": "workshop-link/src/renderer-connection.js",
+      "sha256": "1a13ba2aceb26f45f952e90a66e9bde863781b9c3a5c5a12b46ab2a27a5f42dd"
+    },
+    {
+      "path": "workshop-link/src/renderer-details.js",
+      "sha256": "b2e492d741b1a93e7be45c087c3844915e6e5c09385caa46621158c0083d960a"
+    },
+    {
+      "path": "workshop-link/src/renderer-friends.js",
+      "sha256": "e38b574539e79742ca2c7c9d5ab0395cbcb1e63ff6ac739e2013798fabecc982"
+    },
+    {
+      "path": "workshop-link/src/renderer-install-review.js",
+      "sha256": "ba6bb9d9354275278c271a5d1f33b0abff6bfd09ed368e666b7c5025b29b95ac"
+    },
+    {
+      "path": "workshop-link/src/renderer-library.js",
+      "sha256": "cfa8cc81f004a80668b7bca768fbdc3de5f479bf25cbbf2e8022bb456fcd9254"
+    },
+    {
+      "path": "workshop-link/src/renderer-lists.js",
+      "sha256": "aceddf215d75ab4cfddc3c5253b72abd44b05c3cafcd00dce206e0a61af85691"
+    },
+    {
+      "path": "workshop-link/src/renderer-settings.js",
+      "sha256": "c1efa662afda44b62804c192ff80cb74e89b14b7febcb4f049cc68054f58fbbc"
+    },
+    {
+      "path": "workshop-link/src/renderer-sidebar.js",
+      "sha256": "3fe6c69de71fe2b36282078481e5909ecd190cb2f505ffb4b0aab26fb1143e1e"
+    },
+    {
+      "path": "workshop-link/src/renderer-storage.js",
+      "sha256": "097502f360a7ca6a93b6ec50448a35695c5f0a5840edf1aae976fe4ab978836c"
+    },
+    {
+      "path": "workshop-link/src/renderer-themes.js",
+      "sha256": "1db47a729ef9fc58a4535e8af2b9167a6b090d660b07e64451ff17421226639c"
+    },
+    {
+      "path": "workshop-link/src/renderer-utility.js",
+      "sha256": "ce48a05aad8405f7540d59d7775172dc866224e2fd0380a697105adc92731e26"
+    },
+    {
+      "path": "workshop-link/src/renderer-workshop.js",
+      "sha256": "7cde9f7b22a2c1607fb5433732b2fad111190c7f197673dbffa40557912a7f8b"
+    },
+    {
+      "path": "workshop-link/src/renderer.js",
+      "sha256": "6324e3e49b1f09e1691317fd105a9f4eb3d969bcf9b1ddb5f5a749c424d5cb2e"
+    },
+    {
+      "path": "workshop-link/src/service-config.json",
+      "sha256": "544cbc4a9eaa5ec48fa679b7e9d62281465c9ba12ab852061992665228863996"
+    },
+    {
+      "path": "workshop-link/src/state.cjs",
+      "sha256": "153c315f91098c861e45970f74a283c40eadb655e0f8a4d0d6182c9c51131919"
+    },
+    {
+      "path": "workshop-link/src/steam.cjs",
+      "sha256": "2ceab006e27bdc535d5ec7ddd8542e63872ff31693187683c3c28bca8aefc0b1"
+    },
+    {
+      "path": "workshop-link/src/style.css",
+      "sha256": "61e8dbd676fd3d9f1337dc0e42a4361532065ec8d8f50cf9416510e25126c028"
+    },
+    {
+      "path": "workshop-link/src/themes.js",
+      "sha256": "80e62244ec75888673d75aae80c35602a0730f1d69d06515e48f8c8e1172ebc2"
+    },
+    {
+      "path": "workshop-link/src/update-config.json",
+      "sha256": "17a63c6599c602a7c18ad2dbe5c88d36524316c6435c24054e7ae8cd141d109c"
+    },
+    {
+      "path": "workshop-link/src/workshop-details.cjs",
+      "sha256": "323db2029304b3987f398c7655d093241f388eb3ea11eb443ad42a4fc3788fa2"
+    },
+    {
+      "path": "workshop-link/src/workshop-files.cjs",
+      "sha256": "5eeea919fbbd0ce2166499f464c7b310eae4e1cab1a943304761e7c3c7742de6"
+    },
+    {
+      "path": "workshop-link/src/workshop-install.cjs",
+      "sha256": "e1e521e56058ea7ddab7b825afb5b3d5911671479c5f8534aef49218ffe016ce"
+    },
+    {
+      "path": "workshop-link/src/workshop-search.cjs",
+      "sha256": "d6b593e0adab7e3e092277d1c995fb2c9a174ff838709b7afee08cbcb76ce4cd"
+    }
+  ]
+}

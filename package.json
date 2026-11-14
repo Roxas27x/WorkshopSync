@@ -1,0 +1,18 @@
+{
+  "name": "workshopsync-source",
+  "version": "0.10.1",
+  "private": true,
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Roxas27x/WorkshopSync.git"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "node --test workshop-link/tests/*.test.cjs workshop-sync-service/tests/*.test.mjs workshopsync-site/site.test.mjs",
+    "test:ui": "node scripts/ui-test.cjs",
+    "check:public": "node scripts/check-publication.cjs"
+  }
+}

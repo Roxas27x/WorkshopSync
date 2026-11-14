@@ -1,0 +1,87 @@
+{
+  "name": "workshop-link",
+  "productName": "WorkshopSync",
+  "version": "0.10.1",
+  "private": true,
+  "description": "Share and synchronize Steam Workshop mods with friends",
+  "main": "src/app.cjs",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "package": "node scripts/package.cjs",
+    "installer": "electron-builder --win nsis --x64 --publish never",
+    "release:prepare": "node scripts/prepare-release.cjs",
+    "release:publish": "electron scripts/publish-release.cjs"
+  },
+  "devDependencies": {
+    "electron": "45.3.1",
+    "electron-builder": "26.18.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "electron-updater": "6.8.11"
+  },
+  "build": {
+    "appId": "com.workshoplink.companion",
+    "productName": "WorkshopSync",
+    "directories": {
+      "output": "installer"
+    },
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "verifyUpdateCodeSignature": false,
+      "artifactName": "Workshop-Link-Setup-${version}.exe",
+      "signExecutable": false,
+      "icon": "src/assets/workshopsync.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "WorkshopSync",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "src/assets/workshopsync.ico",
+      "uninstallerIcon": "src/assets/workshopsync.ico"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://workshop-sync-production.up.railway.app/updates/"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.WorkshopSync.txt"
+      },
+      {
+        "from": "THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.WorkshopSync.md"
+      }
+    ],
+    "afterPack": "scripts/include-dependency-licenses.cjs"
+  },
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Roxas27x/WorkshopSync.git",
+    "directory": "workshop-link"
+  },
+  "bugs": {
+    "url": "https://github.com/Roxas27x/WorkshopSync/issues"
+  },
+  "homepage": "https://workshopsync.pages.dev/"
+}

@@ -1,0 +1,50 @@
+# Dependencies and generated build output
+**/node_modules/
+**/installer/
+**/portable/
+workshop-sync-service/dist/
+!workshopsync-site/dist/
+!workshopsync-site/dist/**
+
+# Local hosting state and credentials
+**/.wrangler/
+**/.railway/
+**/.env
+**/.env.*
+!**/.env.example
+**/.npmrc
+**/deployment.json
+**/companion-session.json
+**/release-signing-key.json
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+**/*.sqlite*
+**/*.db
+**/Local State
+**/Cookies*
+**/Network/
+**/Session Storage/
+**/Local Storage/
+
+# Personal profiles, test artifacts, downloads, and logs
+**/qa-*/
+**/*.log
+**/*.tmp
+**/*.part
+**/*.exe
+**/*.blockmap
+**/*.release.json
+**/pre-installer-preferences.json
+**/lists.json*
+ui-artifacts/
+releases/
+*.zip
+.DS_Store
+Thumbs.db
+
+# Optional local smoke-test snapshots
+/*.png
+/*-preferences.json
+/*-state.json
