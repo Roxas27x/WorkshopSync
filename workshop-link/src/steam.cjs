@@ -4,6 +4,8 @@ const {execFile} = require('node:child_process');
 const {promisify} = require('node:util');
 const {id, gameId, normalizeDetail, parseVdf} = require('./core.cjs');
 const Legacy=require('./legacy-workshop.cjs');
+const {signedIn}=require('./community.cjs');
+function steamAuthorizationRequired(){const error=new Error('Steam download authorization expired. Reconnect Steam, then retry your saved selection.');error.code='STEAM_WEB_AUTH_REQUIRED';return error;}
 const delay=ms=>new Promise(r=>setTimeout(r,ms));
 class Steam {
   constructor(ses) { this.ses=ses; this.cache=new Map(); }
@@ -12,6 +14,7 @@ class Steam {
     if(body) { options.body=new URLSearchParams(body).toString(); options.headers={'Content-Type':'application/x-www-form-urlencoded','Origin':'https://steamcommunity.com','Referer':'https://steamcommunity.com/'}; }
     const response = authenticated ? await this.ses.fetch(url,options) : await fetch(url,options);
     if(response.status===429) throw new Error('Steam is rate limiting requests. Wait a few minutes before trying again.');
+    if(authenticated&&response.status===401){this.authorizationFailure=(await this.auth())?.steamid;this.authorization=null;throw steamAuthorizationRequired();}
     if(!response.ok) throw new Error(`Steam returned HTTP ${response.status}. Try again later.`);
     try { return await response.json(); } catch { throw new Error('Steam returned an unexpected response. Sign in again or use Open in Steam.'); }
   }
@@ -46,19 +49,25 @@ class Steam {
     if(!steamid) return null;
     return {steamid,sessionid};
   }
+  async ensureAuthorized(expectedAccount,{fresh=false}={}) {
+    let auth=await this.auth();
+    const expired=()=>{this.authorizationFailure=expectedAccount;this.authorization=null;return steamAuthorizationRequired();};
+    if(!auth||auth.steamid!==expectedAccount)throw expired();
+    if(!fresh&&auth.sessionid&&this.authorization?.steamid===expectedAccount&&this.authorization.sessionid===auth.sessionid&&Date.now()-this.authorization.at<30000&&!this.authorizationFailure)return auth;
+    const response=await this.ses.fetch('https://steamcommunity.com/my/?l=english',{signal:AbortSignal.timeout(30000)});
+    if(response.status===401)throw expired();
+    if(!response.ok)throw new Error(`Steam could not check download authorization (HTTP ${response.status}). Try again shortly.`);
+    try{signedIn(await response.text(),expectedAccount);}catch{throw expired();}
+    auth=await this.auth();if(auth?.steamid!==expectedAccount||!auth.sessionid)throw expired();
+    this.authorizationFailure=null;this.authorization={steamid:auth.steamid,sessionid:auth.sessionid,at:Date.now()};return auth;
+  }
   async mutate(kind, params, expectedAccount) {
     if(!['subscribe','unsubscribe'].includes(kind)) throw new Error('Unsupported Steam action.');
     id(params.id);gameId(params.appid);
     let auth=await this.auth();
-    if(!auth) throw new Error('Sign in to Steam in the companion first.');
+    if(!auth) throw steamAuthorizationRequired();
     if(expectedAccount && auth.steamid!==expectedAccount) throw new Error('The Steam account changed. Review your game sync choices again.');
-    if(!auth.sessionid){
-      const response=await this.ses.fetch('https://steamcommunity.com/',{signal:AbortSignal.timeout(30000)});
-      if(!response.ok)throw new Error('Steam could not refresh the browser session. Open Steam sign-in and try again.');
-      auth=await this.auth();
-      if(!auth?.sessionid)throw new Error('Steam browser session is not ready. Open Steam sign-in and try again.');
-      if(expectedAccount&&auth.steamid!==expectedAccount)throw new Error('The Steam account changed. Review your game sync choices again.');
-    }
+    auth=await this.ensureAuthorized(expectedAccount||auth.steamid);
     const data=await this.request(`https://steamcommunity.com/sharedfiles/${kind}/`,{...params,sessionid:auth.sessionid},true);
     if(Number(data.success)!==1) throw new Error(`Steam declined this action (${data.success ?? 'unknown response'}). Check sign-in, ownership, and Workshop availability.`);
     return true;

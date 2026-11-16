@@ -4,5 +4,6 @@ function showConnection(){
  $('.modal').dataset.connectionSheet='true';
 }
 function showSteamAuthorization(){
- modal('Authorize Steam downloads','<p>Your browser confirmation has connected your Steam identity and friend sharing. Steam requires a separate Community session before this companion can subscribe to Workshop items or read private pages.</p><p>Use Steam’s own sign-in page for the same account. You can approve its QR code with Steam Guard instead of typing a password. This permission is remembered on this PC.</p>','<button data-action="close">Later</button><button class="primary" data-action="authorizeSteam">Open Steam authorization ↗</button>');
+ const review=Boolean($('.modal')?.dataset.reviewToken);if($('.modal'))suspendCurrentModal();
+ modal('Reconnect Steam downloads',`<p>Steam needs a valid Community sign-in before this companion can subscribe to Workshop items or read private pages.</p><p>Approve the same account on Steam’s sign-in page. You can use its QR code with Steam Guard.</p>${review?'<p>Your reviewed mods and checkboxes are saved here. After reconnecting, return to this review and press Install selected again.</p>':''}`,'<button data-action="close">'+(review?'Back to review':'Later')+'</button><button class="primary" data-action="authorizeSteam">Reconnect Steam ↗</button>');
 }

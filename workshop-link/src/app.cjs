@@ -23,7 +23,7 @@ const {WorkshopDetails,externalUrl}=require('./workshop-details.cjs');
 const workshopDetails=new WorkshopDetails((url,body)=>steam.request(url,body),(url,options)=>steamWebAccount&&steamWebAccount===steamAccount?steam.ses.fetch(url,options):fetch(url,options));
 const {installWorkshop}=require('./workshop-install.cjs');
 const {InstallReviews,reviewRequired}=require('./install-review.cjs');
-const installReviews=new InstallReviews((ids,progress)=>workshopDetails.inspectMany(ids,progress));
+const installReviews=new InstallReviews((ids,progress,budget)=>workshopDetails.inspectMany(ids,progress,budget));
 const reviewProgress=(count,total)=>{state.progress=`Checking mod notes: ${count} / ${total}`;emit();};
 async function prepareInstallReview(g,rows,privacy='existing',automatic=false){const candidates=rows.filter(row=>!g.subscribedIds.includes(row.id));if(!candidates.length)return null;return installReviews.createIfNeeded({game:g.id,account:state.account,rows:candidates,privacy,automatic,subscribed:g.subscribedIds},reviewProgress);}
 const {randomUUID}=require('node:crypto');
@@ -51,7 +51,7 @@ function snapshot(){
 }
 function emit(){if(main&&!main.isDestroyed())main.webContents.send('state',snapshot());}
 async function account(){
- const auth=await steam.auth();const selected=selectIdentity(auth,relay);steamWebAccount=auth?.steamid||null;steamAccount=selected?.steamid||null;
+ const auth=await steam.auth();const selected=selectIdentity(auth,relay);steamWebAccount=auth?.steamid&&steam.authorization?.steamid===auth.steamid&&steam.authorizationFailure!==auth.steamid?auth.steamid:null;steamAccount=selected?.steamid||null;
  if(steamAccount&&state.account!==steamAccount){resetAccount(state);localPlayHistory={};if(relay.steamid&&relay.steamid!==steamAccount)await relay.forget();state.account=steamAccount;log('Steam account changed. Sharing and synchronization are off for every game.');await save();}
  return selected;
 }
@@ -105,7 +105,7 @@ async function scan({quiet=false}={}){
 async function refreshWeb(){
  const startedAt=Date.now();
  const before=AppLog.scanFingerprint(state.games);
- const auth=await account();if(!auth)throw new Error('Connect Steam first.');requireCommunity();
+ const auth=await account();if(!auth)throw new Error('Connect Steam first.');await requireCommunity();
  const rows=(await ownSubscriptions(steam,auth.steamid,(count,total)=>{state.progress=`Reading subscriptions: ${count}${total===null?'':` / ${total}`}`;emit();})).map(row=>({...row,placeholder:true}));
  const grouped=new Map();for(const row of rows){if(!grouped.has(row.appid))grouped.set(row.appid,[]);grouped.get(row.appid).push(row);}
  for(const row of rows){const g=ensureGame(row.appid,row.gameName);if(!g.workshop){g.items ||= [];g.subscribedIds=grouped.get(row.appid).map(x=>x.id);g.catalogAt=0;await verifyGame(g);}}
@@ -127,9 +127,15 @@ function openSteam(url='https://steamcommunity.com/login/home/'){
  steamWindow=new BrowserWindow({title:'Steam — WorkshopSync',icon:appIcon,width:1080,height:820,autoHideMenuBar:true,webPreferences:{partition:'persist:steam',nodeIntegration:false,contextIsolation:true,sandbox:true}});
  steamWindow.webContents.on('will-navigate',(e,url)=>{if(!allowed(url))e.preventDefault();});steamWindow.webContents.on('will-redirect',(e,url)=>{if(!allowed(url))e.preventDefault();});
  steamWindow.webContents.setWindowOpenHandler(({url})=>{if(allowed(url))steamWindow.loadURL(url);return{action:'deny'};});
- steamWindow.webContents.on('did-finish-load',()=>account().then(emit).catch(()=>{}));steamWindow.on('closed',()=>{steamWindow=null;account().then(emit).catch(()=>{});});steamWindow.loadURL(url);
+ const refreshAuthorization=async()=>{await account();if(steamAccount)try{await requireCommunity({fresh:true});}catch{}emit();};
+ steamWindow.webContents.on('did-finish-load',()=>refreshAuthorization().catch(()=>{}));steamWindow.on('closed',()=>{steamWindow=null;refreshAuthorization().catch(()=>{});});steamWindow.loadURL(url);
 }
-function requireCommunity(){if(!steamAccount||steamWebAccount!==steamAccount){const error=new Error('Authorize Steam Community access to read private subscriptions or subscribe to Workshop items.');error.code='STEAM_WEB_AUTH_REQUIRED';throw error;}}
+async function requireCommunity(options){
+ if(!steamAccount){const error=new Error('Connect Steam before installing Workshop items.');error.code='STEAM_IDENTITY_REQUIRED';throw error;}
+ const expected=steamAccount;
+ try{await steam.ensureAuthorized(expected,options);assertSameAccount(expected,steamAccount);steamWebAccount=expected;}
+ catch(error){if(error.code==='STEAM_WEB_AUTH_REQUIRED')steamWebAccount=null;throw error;}
+}
 async function beginConnection(){
  connectionError='';
  if(relay.token&&!relay.verified){try{await relay.verifyIdentity();}catch(error){if(error.status===401)await relay.forget();else throw error;}}
@@ -189,7 +195,7 @@ async function updateService({refreshSteamFriends=false}={}){
  state.relay.lastUpdated=Date.now();await save();return registered;
 }
 async function subscribe(g,rows,{automatic=false,reviewedIds=null}={}){
- if(automatic&&!g.sync)throw new Error('Enable synchronization for this game first.');const expectedAccount=state.account;const auth=await account();if(!auth)throw new Error('Connect Steam first.');assertSameAccount(expectedAccount,auth.steamid);requireCommunity();if(automatic&&!g.sync)throw new Error('Account changed. Enable this game again.');
+ if(automatic&&!g.sync)throw new Error('Enable synchronization for this game first.');const expectedAccount=state.account;const auth=await account();if(!auth)throw new Error('Connect Steam first.');assertSameAccount(expectedAccount,auth.steamid);await requireCommunity();if(automatic&&!g.sync)throw new Error('Account changed. Enable this game again.');
  const ids=[...new Set(rows.map(x=>id(x.id)))];const details=await steam.details(ids,true,true);
  if(details.some(x=>!x.unavailable&&(x.appid!==g.id||x.type===2)))throw new Error('A selected item does not belong to this game. No subscriptions were changed.');
  const verified=details.filter(x=>!x.unavailable);g.pendingReviewIds=(g.pendingReviewIds||[]).filter(pid=>!ids.includes(pid)||verified.some(row=>row.id===pid));if(verified.length!==details.length)log(`Skipped ${details.length-verified.length} unavailable Workshop items.`,'warning',{category:'download',game:g.id,routine:false});
@@ -235,12 +241,12 @@ async function action(type,p={}){
  if(type==='workshopSearch'){game(p.game);return workshopSearch.search(p);}
  if(type==='openWorkshop'){game(p.game);openSteam(searchUrl(searchOptions(p)));return;}
  if(type==='open'){openSteam(`https://steamcommunity.com/sharedfiles/filedetails/?id=${id(p.id)}`);return;}
- if(type==='toggle'){await account();if(p.value===true)requireCommunity();const g=game(p.game);g.sync=p.value===true;await save();emit();return;}
+ if(type==='toggle'){await account();if(p.value===true)await requireCommunity();const g=game(p.game);g.sync=p.value===true;await save();emit();return;}
  if(busy)throw new Error('Another operation is in progress. Wait for it to finish.');busy=true;emit();
  try{
   let result;
-  if(type==='prepareDeleteMods'){await account();requireCommunity();const expected=state.account,g=game(p.game),scan=await scanLibraries(state.extraRoots,expected);assertSameAccount(expected,state.account);result=await modDeletion.prepare(g,p.ids,scan.roots,expected);assertSameAccount(expected,state.account);}
-  else if(type==='deleteMods'){await account();requireCommunity();const expected=state.account,g=game(p.game);state.known[expected]||={};result=await modDeletion.confirm(g,p,expected,{assertAccount:()=>assertSameAccount(expected,state.account),unsubscribe:pid=>steam.mutate('unsubscribe',{id:pid,appid:g.id},expected),save,known:state.known[state.account],publish:()=>relay.token?updateService():Promise.resolve(),pause:()=>delay(750),onProgress:row=>{state.progress='Deleting '+row.title;emit();}});log('Deleted '+result.deleted.length+' mods'+(result.failed.length?'; '+result.failed.length+' need attention.':'.'),'info',{category:'download',game:g.id,routine:false});}
+  if(type==='prepareDeleteMods'){await account();await requireCommunity();const expected=state.account,g=game(p.game),scan=await scanLibraries(state.extraRoots,expected);assertSameAccount(expected,state.account);result=await modDeletion.prepare(g,p.ids,scan.roots,expected);assertSameAccount(expected,state.account);}
+  else if(type==='deleteMods'){await account();await requireCommunity();const expected=state.account,g=game(p.game);state.known[expected]||={};result=await modDeletion.confirm(g,p,expected,{assertAccount:()=>assertSameAccount(expected,state.account),unsubscribe:pid=>steam.mutate('unsubscribe',{id:pid,appid:g.id},expected),save,known:state.known[state.account],publish:()=>relay.token?updateService():Promise.resolve(),pause:()=>delay(750),onProgress:row=>{state.progress='Deleting '+row.title;emit();}});log('Deleted '+result.deleted.length+' mods'+(result.failed.length?'; '+result.failed.length+' need attention.':'.'),'info',{category:'download',game:g.id,routine:false});}
   else if(type==='blacklistMods'){await account();if(!state.account)throw Error('Connect Steam first.');const g=game(p.game),ids=(p.ids||[]).map(id);if(!ids.length||ids.length>1000)throw Error('Select mods to blacklist.');const rows=await steam.details(ids,true,true);if(rows.some(row=>row.appid!==g.id&&!row.unavailable))throw Error('Choose mods for this game.');Blacklist.block(g,rows);}
   else if(type==='allowAutoSync'){await account();if(!state.account)throw Error('Connect Steam first.');const g=game(p.game);Blacklist.allow(g,(p.ids||[]).map(id));}
   else if(type==='refreshLibrary')await refreshLibrary();
@@ -260,7 +266,7 @@ async function action(type,p={}){
    for(const row of rows){const g=game(row.appid),list=ModLists.get(g,g.id===p.game?p.targetListId:undefined);if(!list.items.some(x=>x.id===row.id))list.items.push({...row,addedAt:Date.now()});ModLists.legacy(g);}log(`Added ${rows.length} items to companion lists.`,'success');
   }
   else if(type==='confirmModReview'){
-   await account();requireCommunity();const checked=await installReviews.confirm(p,state.account,reviewProgress);if(checked.review)throw reviewRequired(checked.review);
+   await account();await requireCommunity({fresh:true});const checked=await installReviews.confirm(p,state.account,reviewProgress);if(checked.review)throw reviewRequired(checked.review);
    const g=game(checked.ticket.game),approved=new Set(checked.ids);
    if(checked.ticket.privacy==='existing')result=await subscribe(g,checked.rows,{reviewedIds:approved});
    else result=await installWorkshop(g,{ids:checked.ids,privacy:checked.ticket.privacy},{details:ids=>steam.details(ids,true),subscribe:rows=>subscribe(g,rows,{reviewedIds:approved}),maxItems:5200,save,emit,publish:()=>updateService(),sharingConnected:!!relay.token&&relay.steamid===steamAccount});
@@ -268,11 +274,11 @@ async function action(type,p={}){
   }
   else if(type==='reviewPendingMods'){await syncGame(game(p.game),{manualReview:true});}
   else if(type==='installModFromDetails'){
-   await account();requireCommunity();const detail=await workshopDetails.get(id(p.id)),g=ensureGame(detail.appid);if(!await verifyGame(g))throw new Error('This item does not belong to a Workshop-enabled game.');
+   await account();await requireCommunity();const detail=await workshopDetails.get(id(p.id)),g=ensureGame(detail.appid);if(!await verifyGame(g))throw new Error('This item does not belong to a Workshop-enabled game.');
    result=await installWorkshop(g,{ids:[detail.id],privacy:p.privacy},{details:async ids=>{const rows=await steam.details(ids,true),review=await prepareInstallReview(g,rows,p.privacy);if(review)throw reviewRequired(review);return rows;},subscribe:rows=>subscribe(g,rows),save,emit,publish:()=>updateService(),sharingConnected:!!relay.token&&relay.steamid===steamAccount});
   }
   else if(type==='workshopInstall'){
-   await account();requireCommunity();const g=game(p.game);
+   await account();await requireCommunity();const g=game(p.game);
    result=await installWorkshop(g,p,{details:async ids=>{const rows=await steam.details(ids,true),review=await prepareInstallReview(g,rows,p.privacy);if(review)throw reviewRequired(review);return rows;},subscribe:rows=>subscribe(g,rows),save,emit,publish:()=>updateService(),sharingConnected:!!relay.token&&relay.steamid===steamAccount});
   }
   else if(type==='adopt'){
@@ -282,7 +288,7 @@ async function action(type,p={}){
   else if(type==='remove'){const g=game(p.game),ids=new Set((p.ids||[]).map(id));const list=ModLists.get(g,p.targetListId);list.items=list.items.filter(x=>!ids.has(x.id));ModLists.legacy(g);}
   else if(type==='subscribe'){const g=game(p.game);if(p.peer)await refreshGameFriends(g);const ids=new Set((p.ids||[]).map(id));const rows=(p.peer?FriendItems.selected(g,state.friends,p):[...ModLists.allItems(g),...g.subscriptions]).filter(x=>ids.has(x.id)).map(row=>({...row,installSources:row.installSources||row.addedBy||sourcesFor(state)}));if(!rows.length)throw new Error('Select items first.');await subscribe(g,rows);}
   else if(type==='installFriendMods'){
-   await account();requireCommunity();const g=game(p.game);if(!['subscriptions','curated'].includes(p.mode)||!(p.peer==='all'||p.peer==='selected'&&Array.isArray(p.peers)&&p.peers.length>0&&p.peers.length<=2000&&p.peers.every(pid=>/^765\d{14}$/.test(pid))||/^765\d{14}$/.test(p.peer)))throw new Error('Choose a valid friend filter and list.');
+   await account();await requireCommunity();const g=game(p.game);if(!['subscriptions','curated'].includes(p.mode)||!(p.peer==='all'||p.peer==='selected'&&Array.isArray(p.peers)&&p.peers.length>0&&p.peers.length<=2000&&p.peers.every(pid=>/^765\d{14}$/.test(pid))||/^765\d{14}$/.test(p.peer)))throw new Error('Choose a valid friend filter and list.');
    if(p.peer==='all'||p.peer==='selected')await refreshGameFriends(g);else{await updateService();await refreshPeer(g,p.peer);}
    const rows=FriendItems.installable(g,state.friends,{peer:p.peer,peers:p.peers,sourceList:p.sourceList,mode:p.mode}),already=new Set(g.subscribedIds),candidates=rows.filter(row=>!already.has(row.id));if(candidates.length>5000)throw new Error('This view exceeds the 5,000-item batch limit. Select a smaller group or choose one friend.');
    result=candidates.length?await subscribe(g,candidates):{requested:0,available:rows.length,skipped:0,alreadySubscribed:rows.length,canceled:false};
@@ -291,7 +297,7 @@ async function action(type,p={}){
   else if(type==='listCreate'){const list=ModLists.create(game(p.game),randomUUID(),p.name);result={listId:list.id};}
   else if(type==='listRename')ModLists.rename(game(p.game),p.listId,p.name);
   else if(type==='listDelete'){ModLists.remove(game(p.game),p.listId);if(relay.token)await updateService();}
-  else if(type==='listSync'){const g=game(p.game),list=ModLists.get(g,p.listId);if(p.value)requireCommunity();list.sync=p.value===true;}
+  else if(type==='listSync'){const g=game(p.game),list=ModLists.get(g,p.listId);if(p.value)await requireCommunity();list.sync=p.value===true;}
   else if(type==='listShare'){const g=game(p.game),list=ModLists.get(g,p.listId),audience=ModLists.validateAudience(p.audience,state.friends);if(audience.mode!=='private'&&(!g.shareList||g.sharingAudience.mode==='private'))throw new Error('Enable list sharing in this game’s Sharing menu first.');list.audience=audience;if(audience.mode!=='private'){g.shareList=true;g.sharingConfigured=true;}await updateService();}
   else if(type==='followFriends'){
    const g=game(p.game);if(!['subscriptions','curated'].includes(p.mode)||!Array.isArray(p.friendIds)||p.friendIds.length>2000||p.friendIds.some(pid=>!/^765\d{14}$/.test(pid)))throw new Error('Choose valid connected friends.');
@@ -359,7 +365,7 @@ if(!app.requestSingleInstanceLock())app.quit();else{
    if(event.sender!==main.webContents||event.senderFrame!==main.webContents.mainFrame||event.senderFrame.url!==appUrl)throw new Error('Untrusted request.');if(typeof type!=='string'||JSON.stringify(payload||{}).length>300000)throw new Error('Invalid request.');
    try{return{ok:true,data:await action(type,payload)};}catch(e){if(e.code==='MOD_REVIEW_REQUIRED'){await save();emit();return{ok:false,error:e.message,code:e.code,review:e.review};}const needsAuth=['STEAM_WEB_AUTH_REQUIRED','STEAM_IDENTITY_REQUIRED'].includes(e.code);log(e.message,needsAuth?'info':'error',{category:needsAuth?'sharing':undefined});await save();emit();return{ok:false,error:e.message,code:e.code};}
   });
-  await main.loadURL(appUrl);main.show();busy=true;emit();try{await account();await scan();if(relay.token&&relay.steamid===steamAccount){await updateService();}}catch(e){log(e.message,'error');}finally{busy=false;emit();}
+  await main.loadURL(appUrl);main.show();busy=true;emit();try{await account();if(steamAccount)try{await requireCommunity();}catch(error){log(error.message,error.code==='STEAM_WEB_AUTH_REQUIRED'?'info':'warning',{category:'sharing'});}await scan();if(relay.token&&relay.steamid===steamAccount){await updateService();}}catch(e){log(e.message,'error');}finally{busy=false;emit();}
   setTimeout(()=>updates.check().catch(()=>{}),5000);setInterval(()=>updates.check().catch(()=>{}),60*60000);
   setInterval(tick,60000);
   setInterval(async()=>{if(polling||!relay.pending||busy)return;polling=true;busy=true;emit();try{const peer=await relay.poll();if(peer){await account();connectSharing(state);connectionError='';log('Steam and friend sharing connected. Workshop games are shared by default; downloads remain opt-in.','success');await scan({quiet:true});await updateService({refreshSteamFriends:true});await save();}}catch(e){connectionError=e.message;relay.pending=null;log(e.message,'error');}finally{polling=false;busy=false;emit();}},2500);

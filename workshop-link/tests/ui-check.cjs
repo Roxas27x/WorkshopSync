@@ -121,7 +121,7 @@ app.whenReady().then(async()=>{
  await check('document.querySelector("#dialog-title").textContent==="Steam & friends connected"&&document.querySelectorAll(".connection-steps .done").length===2','Browser confirmation automatically completes both steps');
  await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/ui-v4-connect.png'),(await win.webContents.capturePage()).toPNG());
  await run('document.querySelector("[data-action=close]").click();document.querySelector("[data-action=toggle]").click()');await wait();
- await check('document.querySelector("#dialog-title").textContent==="Authorize Steam downloads"&&document.querySelector("[data-action=toggle]").getAttribute("aria-checked")==="false"','Browser identity alone cannot authorize Workshop writes');
+ await check('document.querySelector("#dialog-title").textContent==="Reconnect Steam downloads"&&document.querySelector("[data-action=toggle]").getAttribute("aria-checked")==="false"','Browser identity alone cannot authorize Workshop writes');
  await run('document.querySelector("[data-action=close]").click();window.workshop.action("qaAuthorize")');await wait();
  await run('document.querySelector("[data-action=away]").click()');
  await check('document.querySelector(".mod-event").textContent.includes("Workshop Friend")&&document.querySelector(".mod-event time").textContent.length>5','While away shows dated friend additions');
@@ -294,14 +294,22 @@ app.whenReady().then(async()=>{
  await check('window.workshop.action("state").then(r=>!r.data.games[0].subscribedIds.includes("772")&&!r.data.games[0].subscribedIds.includes("774"))','No subscriptions change before compatibility confirmation');
  win.setContentSize(1000,720);await wait();await check('document.querySelector(".modal").scrollWidth<=document.querySelector(".modal").clientWidth','Compatibility review fits the minimum app width');
  await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/mod-review-minimum.png'),(await win.webContents.capturePage()).toPNG());
- await run('window.workshop.action("qaSlowNextInspection");document.querySelector("#review-ack").checked=true;document.querySelector("[data-action=confirmModReview]").click();document.querySelector("[data-action=close]").click()');await new Promise(r=>setTimeout(r,400));
- await check('document.querySelector(".modal").dataset.modDetails==="772"&&!document.querySelector(".install-review")','Closing a review during dependency checks prevents a late popup from replacing the parent');
- await check('window.workshop.action("state").then(r=>!r.data.games[0].subscribedIds.includes("772")&&!r.data.games[0].subscribedIds.includes("774"))','Canceling dependency checks sends no subscription requests');
+ await check('document.querySelectorAll("[data-review-item]").length===5&&document.querySelector(".review-tree").textContent.includes("Nested library instructions.")&&document.querySelector(".review-tree").textContent.includes("Optional dependency instructions.")','The first review already contains the complete nested requirement and optional trees with their notes');
+ await run('Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="775").click()');
+ await check('Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="777").checked&&document.querySelector("[data-action=confirmModReview]").textContent==="Install selected (5)"','Choosing an optional mod selects its already-inspected Steam requirements without another prompt');
+ await run('Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="775").click();Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="777").click()');
+ await run('document.querySelector("[data-action=close]").click()');
+ await check('document.querySelector(".modal").dataset.modDetails==="772"&&!document.querySelector(".install-review")','Canceling the complete review returns to the parent mod');
+ await check('window.workshop.action("state").then(r=>!r.data.games[0].subscribedIds.includes("772")&&!r.data.games[0].subscribedIds.includes("774"))','Canceling the complete tree sends no subscription requests');
  await run('Array.from(document.querySelectorAll("[data-action=modInstall]")).find(e=>e.dataset.privacy==="private").click()');await wait();
- await run('document.querySelector("#review-ack").checked=true;document.querySelector("[data-action=confirmModReview]").click()');await wait();
- await check('!!document.querySelector(".install-review")&&document.querySelector(".install-review").textContent.includes("Reviewed mod 774")','Selected dependencies have their own requirements checked before installation');
- await run('document.querySelector("#review-ack").checked=true;document.querySelector("[data-action=confirmModReview]").click()');await wait();
- await check('window.workshop.action("state").then(r=>JSON.stringify(r.data.lastReviewedInstall.ids.slice().sort())===JSON.stringify(["772","774"])&&r.data.games[0].privateItemIds.includes("774")&&!r.data.games[0].subscribedIds.includes("775"))','Confirmed installs include the chosen requirement, preserve privacy, and omit optional mods');
+ await run('window.savedReview=document.querySelector(".install-review");document.querySelector("#review-ack").checked=true;document.querySelector(".modal").scrollTop=120;window.savedReviewScroll=document.querySelector(".modal").scrollTop;window.workshop.action("qaExpireNextInstall");document.querySelector("[data-action=confirmModReview]").click()');await wait();
+ await check('document.querySelector(".modal h2").textContent==="Reconnect Steam downloads"&&document.querySelector(".modal").textContent.includes("checkboxes are saved")','An expired Steam session offers reconnection instead of a generic 401');
+ await check('window.workshop.action("state").then(r=>!r.data.games[0].subscribedIds.includes("772"))','Authorization failures send no new subscription requests');
+ await run('document.querySelector("[data-action=authorizeSteam]").click()');await wait();
+ await check('document.querySelector(".install-review")===window.savedReview&&document.querySelector("#review-ack").checked&&Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="776").checked&&!Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="775").checked&&document.querySelector(".modal").scrollTop===window.savedReviewScroll','Reconnecting restores the exact review, acknowledgement, selections and scroll position');
+ await run('document.querySelector("[data-action=confirmModReview]").click()');await wait();
+ await check('window.workshop.action("state").then(r=>JSON.stringify(r.data.lastReviewedInstall.ids.slice().sort())===JSON.stringify(["772","774","776"])&&r.data.games[0].privateItemIds.includes("776")&&!r.data.games[0].subscribedIds.includes("775"))','One confirmation installs the entire chosen tree, retains privacy, and omits optional branches');
+
  await check('document.querySelector(".modal").dataset.modDetails==="772"','Finishing installation returns to the linked mod popup');
  await check('Array.from(document.querySelectorAll("[data-action=modInstall]")).find(e=>e.dataset.privacy==="private").textContent==="Private ✓"','The restored child reflects its new subscription and privacy status');
  await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/mod-linked-install-minimum.png'),(await win.webContents.capturePage()).toPNG());
@@ -314,7 +322,7 @@ app.whenReady().then(async()=>{
  await run('document.querySelector("#review-ack").checked=true;document.querySelector("[data-action=confirmModReview]").click()');await wait();
  await check('document.querySelector("#review-banner").hidden&&!document.querySelector(".modal")','Approving a queued item clears the review notice without leaving a stale popup');
  await run('showModDetails("781")');await wait();await run('Array.from(document.querySelectorAll("[data-action=modInstall]")).find(e=>e.dataset.privacy==="private").click()');await wait();
- await check('document.querySelectorAll(".review-suggestions input").length===2&&!document.querySelector(".review-suggestions input:checked")&&document.querySelector(".review-suggestions").textContent.includes("New Screen Blood Effects")&&document.querySelector(".review-suggestions").textContent.includes("Dynamic Lights")','A decorated recommendation section shows both actual named optional choices');
+ await check('document.querySelectorAll("[data-review-kind=optional] input").length===2&&!document.querySelector("[data-review-kind=optional] input:checked")&&document.querySelector(".review-tree").textContent.includes("New Screen Blood Effects")&&document.querySelector(".review-tree").textContent.includes("Dynamic Lights")','A decorated recommendation section shows both actual named optional choices');
  await check('!document.querySelector(".review-author-notes")','A heading alone is not rendered as an author warning');
  await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/mod-recommendations-v091.png'),(await win.webContents.capturePage()).toPNG());
  await run('document.querySelector("[data-action=close]").click();document.querySelector("[data-action=close]").click()');

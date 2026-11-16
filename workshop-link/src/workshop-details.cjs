@@ -47,8 +47,8 @@ class WorkshopDetails{
   const result={...row,created:counter(raw.time_created),subscribers:counter(raw.subscriptions),favorites:counter(raw.favorited),views:counter(raw.views),tags:(raw.tags||[]).map(t=>String(t.tag||'').slice(0,100)).filter(Boolean).slice(0,30),authors:extra?.authors||[],images:[...new Set([row.image,...(extra?.images||[])].filter(Boolean))].slice(0,16),required:extra?.required||[],pageDetails:!!extra,descriptionHtml:extra?.descriptionHtml||bbcodeDescription(raw.description),url};
   result.sizeText=extra?.sizeText||'';Object.assign(result,analyzeDescription(result.descriptionHtml,itemId));this.cache.set(itemId,{at:Date.now(),value:result});if(this.cache.size>50)this.cache.delete(this.cache.keys().next().value);return result;
  }
- async inspectMany(values,progress=()=>{}){
-  const ids=[...new Set(values.map(id))],output=[],pageDeadline=Date.now()+15000;this.reviewCache ||= new Map();let pages=0;progress(0,ids.length);
+ async inspectMany(values,progress=()=>{},budget={pageDeadline:Date.now()+15000,pages:0,maxPages:20}){
+  const ids=[...new Set(values.map(id))],output=[],pageDeadline=budget.pageDeadline;this.reviewCache ||= new Map();progress(0,ids.length);
   for(let offset=0;offset<ids.length;offset+=100){
    const chunk=ids.slice(offset,offset+100),missing=chunk.filter(pid=>!this.reviewCache.has(pid)||Date.now()-this.reviewCache.get(pid).at>120000),raw=new Map();
    if(missing.length){const body={itemcount:String(missing.length)};missing.forEach((pid,index)=>body['publishedfileids['+index+']']=pid);const result=await this.request('https://api.steampowered.com/ISteamRemoteStorage/GetPublishedFileDetails/v1/',body);for(const row of result.response?.publishedfiledetails||[])raw.set(String(row.publishedfileid),row);}
@@ -58,7 +58,7 @@ class WorkshopDetails{
     else if(prior&&Date.now()-prior.at<120000)info=prior.value;
     else{const source=raw.get(pid);if(!source||Number(source.result)!==1)info={id:pid,title:'Unavailable Workshop item '+pid,unavailable:true,required:[],relatedItems:[],compatibilityNotes:[],pageDetails:false};
      else{const base=normalizeDetail(source);let extra=null;
-      if(pages<20&&Date.now()<pageDeadline&&Date.now()>(this.reviewPageCooldown||0)){pages++;try{const response=await this.fetchPage(`https://steamcommunity.com/sharedfiles/filedetails/?id=${pid}&l=english`,{signal:AbortSignal.timeout(Math.max(1,Math.min(4000,pageDeadline-Date.now()))),redirect:'error'});if(response.status===429)this.reviewPageCooldown=Date.now()+60000;if(response.ok)extra=pageInformation(await response.text(),pid);}catch{}}
+      if(budget.pages<budget.maxPages&&Date.now()<pageDeadline&&Date.now()>(this.reviewPageCooldown||0)){budget.pages++;try{const response=await this.fetchPage(`https://steamcommunity.com/sharedfiles/filedetails/?id=${pid}&l=english`,{signal:AbortSignal.timeout(Math.max(1,Math.min(4000,pageDeadline-Date.now()))),redirect:'error'});if(response.status===429)this.reviewPageCooldown=Date.now()+60000;if(response.ok)extra=pageInformation(await response.text(),pid);}catch{}}
       info={...base,required:extra?.required||[],pageDetails:!!extra,...analyzeDescription(extra?.descriptionHtml||bbcodeDescription(source.description),pid)};
      }
     }

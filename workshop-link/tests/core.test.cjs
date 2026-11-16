@@ -49,12 +49,12 @@ test('library scan discovers non-default libraries and ignores empty Workshop fo
 });
 test('signed-out and switched-account mutations fail before any network request',async()=>{
   let calls=0;const steam=new Steam({});steam.request=async()=>{calls++;return{success:1};};
-  steam.auth=async()=>null;await assert.rejects(()=>steam.mutate('subscribe',{id:'1',appid:'108600'},'76561198000000000'),/Sign in/);
+  steam.auth=async()=>null;await assert.rejects(()=>steam.mutate('subscribe',{id:'1',appid:'108600'},'76561198000000000'),error=>error.code==='STEAM_WEB_AUTH_REQUIRED');
   steam.auth=async()=>({steamid:'76561198000000001',sessionid:'test'});await assert.rejects(()=>steam.mutate('subscribe',{id:'1',appid:'108600'},'76561198000000000'),/account changed/);
   assert.equal(calls,0);
 });
 test('Steam action failure is not reported as a successful subscription',async()=>{
-  const steam=new Steam({});steam.auth=async()=>({steamid:'76561198000000000',sessionid:'test'});steam.request=async()=>({success:15});
+  const steam=new Steam({fetch:async()=>({ok:true,text:async()=>"<script>g_steamID='76561198000000000';</script>"})});steam.auth=async()=>({steamid:'76561198000000000',sessionid:'test'});steam.request=async()=>({success:15});
   await assert.rejects(()=>steam.mutate('subscribe',{id:'1',appid:'108600'}),/declined/);
 });
 test('network throttling is surfaced instead of retrying or bypassing limits',async()=>{

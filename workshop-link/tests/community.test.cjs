@@ -64,7 +64,7 @@ test('a persistent Steam login identifies the account after restart even when th
  const auth=await steam.auth();assert.equal(auth.steamid,SELF);assert.equal(auth.sessionid,undefined);
 });
 test('subscription writes refresh a missing CSRF cookie and recheck the account before writing',async()=>{
- let reads=0,writes=0;const steam=new Steam({fetch:async()=>({ok:true})});steam.auth=async()=>({steamid:SELF,sessionid:++reads===1?undefined:'new-test-csrf'});steam.request=async()=>{writes++;return{success:1};};
+ let reads=0,writes=0;const steam=new Steam({fetch:async()=>({ok:true,text:async()=>`<script>g_steamID='${SELF}'</script>`})});steam.auth=async()=>({steamid:SELF,sessionid:++reads===1?undefined:'new-test-csrf'});steam.request=async()=>{writes++;return{success:1};};
  await steam.mutate('subscribe',{id:'1',appid:'311210'},SELF);assert.equal(writes,1);
- const changed=new Steam({fetch:async()=>({ok:true})});let calls=0;changed.auth=async()=>++calls===1?{steamid:SELF}:{steamid:OTHER,sessionid:'test'};changed.request=async()=>{throw new Error('Must not write');};await assert.rejects(()=>changed.mutate('subscribe',{id:'1',appid:'311210'},SELF),/account changed/);
+ const changed=new Steam({fetch:async()=>({ok:true})});let calls=0;changed.auth=async()=>++calls===1?{steamid:SELF}:{steamid:OTHER,sessionid:'test'};changed.request=async()=>{throw new Error('Must not write');};await assert.rejects(()=>changed.mutate('subscribe',{id:'1',appid:'311210'},SELF),error=>error.code==='STEAM_WEB_AUTH_REQUIRED');
 });
