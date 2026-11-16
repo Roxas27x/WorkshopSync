@@ -1,7 +1,7 @@
 {
   "name": "workshop-link",
   "productName": "WorkshopSync",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "private": true,
   "description": "Share and synchronize Steam Workshop mods with friends",
   "main": "src/app.cjs",
@@ -19,7 +19,9 @@
   },
   "dependencies": {
     "cheerio": "^1.2.0",
-    "electron-updater": "6.8.11"
+    "electron-updater": "6.8.11",
+    "qrcode-generator": "2.0.4",
+    "steam-session": "1.9.4"
   },
   "build": {
     "appId": "com.workshoplink.companion",

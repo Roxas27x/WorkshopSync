@@ -6,9 +6,9 @@ if(!files.length){function walk(dir){for(const entry of fs.readdirSync(path.join
 const problems=[];
 const rules=[['private key',/-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/],['GitHub credential',/\b(?:gh[pousr]_[A-Za-z0-9]{25,}|github_pat_[A-Za-z0-9_]{30,})\b/],['AWS access key',/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/],['Google API key',/\bAIza[A-Za-z0-9_-]{35}\b/],['personal workstation path',/C:[\\/]+Users[\\/]+Roxas(?:[\\/]|\b)/i]];
 for(const relative of files){const parts=relative.replaceAll('\\','/').split('/'),name=parts.at(-1),absolute=path.resolve(root,relative);if(!absolute.startsWith(root+path.sep))throw Error('File escaped the repository.');
- if(parts.some(part=>ignored.has(part)||part.startsWith('qa-'))||/^(?:companion-session|release-signing-key|deployment)\.json$/i.test(name)||/^(?:Cookies|Local State)$/.test(name)||/\.(?:sqlite(?:-wal|-shm)?|db|pem|key|pfx|p12|log|exe|blockmap)$/i.test(name)||/^lists\.json/.test(name)||name.startsWith('.env')&&name!=='.env.example')problems.push({file:relative,issue:'private, generated, or runtime file'});
+ if(parts.some(part=>ignored.has(part)||part.startsWith('qa-'))||/^(?:companion-session|release-signing-key|steam-renewal|deployment)\.json$/i.test(name)||/^(?:Cookies|Local State)$/.test(name)||/\.(?:sqlite(?:-wal|-shm)?|db|pem|key|pfx|p12|log|exe|blockmap)$/i.test(name)||/^lists\.json/.test(name)||name.startsWith('.env')&&name!=='.env.example')problems.push({file:relative,issue:'private, generated, or runtime file'});
  if(/\.(?:png|ico)$/.test(name))continue;
- const text=fs.readFileSync(absolute,'utf8');for(const[label,pattern]of rules)if(pattern.test(text))problems.push({file:relative,issue:label});
+ const text=fs.readFileSync(absolute,'utf8');if(text.includes('\0'))problems.push({file:relative,issue:'corrupted text file'});for(const[label,pattern]of rules)if(pattern.test(text))problems.push({file:relative,issue:label});
 }
 const manifest=JSON.parse(fs.readFileSync(path.join(root,'docs/runtime-source-v0.10.0.json'),'utf8'));let matched=0;
 for(const item of manifest.files){const file=path.resolve(root,item.path);if(!file.startsWith(root+path.sep))throw Error('Runtime manifest path escaped the repository.');if(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')===item.sha256)matched++;}

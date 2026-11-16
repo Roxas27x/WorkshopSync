@@ -3,6 +3,7 @@ const fs=require('node:fs/promises'),path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const {parseInput,id,gameId,eligible}=require('./core.cjs');
 const {Steam,scanLibraries,resolveLibraryRoot,delay}=require('./steam.cjs');
+const {SteamRenewal}=require('./steam-renewal.cjs');
 const {ownSubscriptions,ownFriends}=require('./community.cjs');
 const {refreshFriendRoster}=require('./friend-sharing.cjs');
 const {storeInfo,gameIcon,visibleGames,confirmedWorkshop}=require('./catalog.cjs');
@@ -39,7 +40,7 @@ app.setName('Workshop Link');
 if(process.platform==='win32')app.setAppUserModelId('com.workshoplink.companion');
 app.setPath('userData',process.env.WORKSHOP_LINK_TEST_DATA||path.join(app.getPath('appData'),'Workshop Link'));
 app.setPath('sessionData',app.getPath('userData'));
-let localPlayHistory={},state,steam,relay,updates,main,steamWindow,installBatch=null,steamAccount=null,steamWebAccount=null,connectionError='',busy=false,tickDue=false,saving=Promise.resolve(),scanAt=0,polling=false;
+let localPlayHistory={},state,steam,renewal,relay,updates,main,steamWindow,installBatch=null,steamAccount=null,steamWebAccount=null,connectionError='',busy=false,tickDue=false,saving=Promise.resolve(),scanAt=0,polling=false;
 const file=()=>path.join(app.getPath('userData'),'lists.json');
 function save(){const value=JSON.stringify(state,null,2);saving=saving.catch(()=>{}).then(async()=>{await fs.mkdir(path.dirname(file()),{recursive:true});await fs.writeFile(file()+'.tmp',value);await fs.rename(file()+'.tmp',file());});return saving;}
 function log(message,kind='info',details={}){state.log=AppLog.append(state.log,{message,kind,at:new Date().toISOString(),...details});}
@@ -47,12 +48,12 @@ function game(value){const g=state.games.find(g=>g.id===gameId(value)&&g.worksho
 function ensureGame(value,name){const gid=gameId(value);let g=state.games.find(x=>x.id===gid);if(!g){g={...newGame(gid,name),lastPlayedAt:localPlayHistory[gid]||null};state.games.push(g);}return g;}
 function snapshot(){
  const linked=!!(steamAccount&&relay.verified&&relay.token&&relay.steamid===steamAccount);
- return {...state,installBatch:installBatch?{...installBatch}:null,games:visibleGames(state.games).map(g=>steamAccount?g:{...g,lastPlayedAt:null,subscriptions:[],subscribedIds:[],friendSnapshots:{},itemHistory:{},items:g.items.map(({addedBy,...item})=>item)}),sharedGameStats:linked?state.sharedGameStats:[],modActivity:steamAccount?state.modActivity:[],unreviewedMods:steamAccount?pendingFriendItems(state):0,friends:steamAccount?state.friends:[],connected:!!steamAccount,steamAccount,steamWebAuthorized:!!steamAccount&&steamWebAccount===steamAccount,connection:{phase:relay.pending?'waiting':linked?'connected':'idle',error:connectionError},busy,relay:{...state.relay,connected:linked,pending:!!relay.pending},appUpdates:updates?.snapshot()||{},appVersion:app.getVersion(),installerUrl,version:5};
+ return {...state,installBatch:installBatch?{...installBatch}:null,games:visibleGames(state.games).map(g=>steamAccount?g:{...g,lastPlayedAt:null,subscriptions:[],subscribedIds:[],friendSnapshots:{},itemHistory:{},items:g.items.map(({addedBy,...item})=>item)}),sharedGameStats:linked?state.sharedGameStats:[],modActivity:steamAccount?state.modActivity:[],unreviewedMods:steamAccount?pendingFriendItems(state):0,friends:steamAccount?state.friends:[],connected:!!steamAccount,steamAccount,steamRenewal:renewal?.snapshot(steamAccount)||{enabled:false,configured:false,status:"off"},steamWebAuthorized:!!steamAccount&&steamWebAccount===steamAccount,connection:{phase:relay.pending?'waiting':linked?'connected':'idle',error:connectionError},busy,relay:{...state.relay,connected:linked,pending:!!relay.pending},appUpdates:updates?.snapshot()||{},appVersion:app.getVersion(),installerUrl,version:5};
 }
 function emit(){if(main&&!main.isDestroyed())main.webContents.send('state',snapshot());}
 async function account(){
  const auth=await steam.auth();const selected=selectIdentity(auth,relay);steamWebAccount=auth?.steamid&&steam.authorization?.steamid===auth.steamid&&steam.authorizationFailure!==auth.steamid?auth.steamid:null;steamAccount=selected?.steamid||null;
- if(steamAccount&&state.account!==steamAccount){resetAccount(state);localPlayHistory={};if(relay.steamid&&relay.steamid!==steamAccount)await relay.forget();state.account=steamAccount;log('Steam account changed. Sharing and synchronization are off for every game.');await save();}
+ if(steamAccount&&state.account!==steamAccount){if(renewal)await renewal.disable();resetAccount(state);localPlayHistory={};if(relay.steamid&&relay.steamid!==steamAccount)await relay.forget();state.account=steamAccount;log('Steam account changed. Sharing and synchronization are off for every game.');await save();}
  return selected;
 }
 async function verifyGame(g){
@@ -234,6 +235,10 @@ async function action(type,p={}){
  if(type==='copyInstallerLink'){clipboard.writeText(installerUrl);return{url:installerUrl};}
  if(type==='login'){await beginConnection();return snapshot();}
  if(type==='authorizeSteam'){openSteam();return;}
+ if(type==='startSteamRenewal'){await account();if(!steamAccount)throw new Error('Connect Steam & friends before enabling Keep me signed in.');return renewal.start(steamAccount);}
+ if(type==='cancelSteamRenewal'){renewal.cancel();return renewal.snapshot(steamAccount);}
+ if(type==='disableSteamRenewal'){await renewal.disable();emit();return snapshot();}
+ if(type==='retrySteamRenewal'){await account();await renewal.renew(steamAccount,{force:true});await account();emit();return renewal.snapshot(steamAccount);}
  if(type==='cancelConnection'){relay.pending=null;connectionError='';emit();return snapshot();}
  if(type==='itemDetails')return workshopDetails.get(id(p.id));
  if(type==='openItemPage'){await shell.openExternal('https://steamcommunity.com/sharedfiles/filedetails/?id='+id(p.id));return;}
@@ -328,7 +333,7 @@ async function action(type,p={}){
    if(relay.token)await relay.request('/v1/profile',{method:'DELETE'});await relay.forget();disconnectSharing(state);for(const g of state.games){g.following=[];g.friendSnapshots={};}log('Companion sharing disconnected and hosted snapshots removed.');
   }
   else if(type==='logout'){
-   if(relay.token)await relay.request('/v1/profile',{method:'DELETE'});await relay.forget();resetAccount(state);await steam.ses.clearStorageData();steamAccount=null;steamWebAccount=null;state.account=null;if(steamWindow&&!steamWindow.isDestroyed())steamWindow.close();
+   await renewal.disable();if(relay.token)await relay.request('/v1/profile',{method:'DELETE'});await relay.forget();resetAccount(state);await steam.ses.clearStorageData();steamAccount=null;steamWebAccount=null;state.account=null;if(steamWindow&&!steamWindow.isDestroyed())steamWindow.close();
   }
   else if(type==='export'){
    const selected=await dialog.showSaveDialog(main,{defaultPath:'workshop-link-backup.json',filters:[{name:'JSON',extensions:['json']}]});
@@ -354,6 +359,7 @@ if(!app.requestSingleInstanceLock())app.quit();else{
   if(old?.version===4&&!await fs.access(file()+'.v4-backup').then(()=>true,()=>false))await fs.copyFile(file(),file()+'.v4-backup');
   state=migrate(old,serviceConfig.url);
   steam=new Steam(session.fromPartition('persist:steam'));relay=new Relay(state.relay.url,{file:path.join(app.getPath('userData'),'companion-session.json'),safeStorage});await relay.load();if(relay.token)try{await relay.verifyIdentity();}catch(error){connectionError=error.message;}
+  renewal=new SteamRenewal({file:path.join(app.getPath('userData'),'steam-renewal.json'),storage:safeStorage,cookies:steam.ses.cookies,userAgent:steam.ses.getUserAgent(),verify:async expected=>{steam.authorization=null;await steam.ensureAuthorized(expected,{fresh:true,allowRenew:false});}});steam.renewal=renewal;renewal.on('state',emit);renewal.on('connected',()=>account().then(emit).catch(()=>{}));
   const {autoUpdater}=require('electron-updater');
   const installed=app.isPackaged&&await fs.access(path.join(process.resourcesPath,'app-update.yml')).then(()=>true,()=>false);
   updates=new AppUpdates({currentVersion:app.getVersion(),config:updateConfig,nativeUpdater:autoUpdater,installed});updates.on('state',emit);
@@ -370,6 +376,7 @@ if(!app.requestSingleInstanceLock())app.quit();else{
   setInterval(tick,60000);
   setInterval(async()=>{if(polling||!relay.pending||busy)return;polling=true;busy=true;emit();try{const peer=await relay.poll();if(peer){await account();connectSharing(state);connectionError='';log('Steam and friend sharing connected. Workshop games are shared by default; downloads remain opt-in.','success');await scan({quiet:true});await updateService({refreshSteamFriends:true});await save();}}catch(e){connectionError=e.message;relay.pending=null;log(e.message,'error');}finally{polling=false;busy=false;emit();}},2500);
   setInterval(()=>{if(!busy)account().then(emit).catch(()=>{});},15000);
+  setInterval(()=>{if(!busy&&steamAccount)renewal.renew(steamAccount).catch(()=>{});},10*60000);
  }).catch(e=>{dialog.showErrorBox('WorkshopSync',e.message);app.quit();});
  app.on('window-all-closed',()=>app.quit());
 }

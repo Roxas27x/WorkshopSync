@@ -65,6 +65,19 @@ app.whenReady().then(async()=>{
  }
  await run('document.querySelector("[data-action=settingsPage][data-id=account]").click()');await wait();
  await check('document.querySelector("#settings-content").textContent.includes("Workshop installs")&&document.querySelector("[data-action=settingsConnection]")&&document.querySelector("[data-action=confirmDisconnect]")','Steam and friend connection controls are grouped together');
+ await check('!document.querySelector("[data-action=keepSteam]").checked','Remembering Steam credentials is an explicit opt-in');
+ await run('document.querySelector("[data-action=keepSteam]").click()');await wait();
+ await check('document.querySelector(".modal").dataset.steamRenewal==="true"&&document.querySelector(".steam-renewal-qr img").complete&&document.querySelector(".steam-renewal-qr img").naturalWidth>0','Keep me signed in opens a locally rendered Steam Guard QR approval');
+ await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/keep-steam-qr.png'),(await win.webContents.capturePage()).toPNG());
+ await run('document.querySelector(".backdrop").click()');await wait();
+ await check('document.querySelector("#settings-content").dataset.settingsPage==="account"&&document.querySelector("[data-action=keepSteam]").checked&&document.querySelector("[data-action=setupSteamRenewal]")','Canceling QR approval returns to Settings and offers finishing setup');
+ await run('document.querySelector("[data-action=setupSteamRenewal]").click()');await wait();
+ await run('window.workshop.action("qaApproveSteamRenewal")');await wait();
+ await check('document.querySelector("#settings-content").dataset.settingsPage==="account"&&document.querySelector("[data-action=keepSteam]").checked&&document.querySelector("#settings-content").textContent.includes("Automatic renewal is active.")','Steam approval activates automatic renewal and returns to the same Settings page');
+ await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/keep-steam-settings.png'),(await win.webContents.capturePage()).toPNG());
+ await run('document.querySelector("[data-action=keepSteam]").click()');await wait();
+ await check('window.workshop.action("state").then(r=>!r.data.steamRenewal.enabled&&r.data.steamWebAuthorized&&r.data.connected&&r.data.relay.connected)','Turning off renewal preserves the current Steam and friend connections');
+
  await run('document.querySelector("[data-action=confirmDisconnect]").click()');
  await check('document.querySelector("#dialog-title").textContent==="Disconnect friend sharing?"&&document.querySelector("[data-action=disconnect]")','Disconnect explains its effect before changing sharing');
  await run('document.querySelector("[data-action=settings][data-page=account]").click()');
@@ -305,7 +318,9 @@ app.whenReady().then(async()=>{
  await run('window.savedReview=document.querySelector(".install-review");document.querySelector("#review-ack").checked=true;document.querySelector(".modal").scrollTop=120;window.savedReviewScroll=document.querySelector(".modal").scrollTop;window.workshop.action("qaExpireNextInstall");document.querySelector("[data-action=confirmModReview]").click()');await wait();
  await check('document.querySelector(".modal h2").textContent==="Reconnect Steam downloads"&&document.querySelector(".modal").textContent.includes("checkboxes are saved")','An expired Steam session offers reconnection instead of a generic 401');
  await check('window.workshop.action("state").then(r=>!r.data.games[0].subscribedIds.includes("772"))','Authorization failures send no new subscription requests');
- await run('document.querySelector("[data-action=authorizeSteam]").click()');await wait();
+ await run('document.querySelector("#keep-steam-signed-in").checked=true;document.querySelector("[data-action=authorizeSteam]").click()');await wait();
+ await check('!!document.querySelector(".steam-renewal-qr img")','A compatibility review can opt into remembered Steam Guard approval');
+ await run('window.workshop.action("qaApproveSteamRenewal")');await wait();
  await check('document.querySelector(".install-review")===window.savedReview&&document.querySelector("#review-ack").checked&&Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="776").checked&&!Array.from(document.querySelectorAll("[data-review-item]")).find(e=>e.dataset.reviewItem==="775").checked&&document.querySelector(".modal").scrollTop===window.savedReviewScroll','Reconnecting restores the exact review, acknowledgement, selections and scroll position');
  await run('document.querySelector("[data-action=confirmModReview]").click()');await wait();
  await check('window.workshop.action("state").then(r=>JSON.stringify(r.data.lastReviewedInstall.ids.slice().sort())===JSON.stringify(["772","774","776"])&&r.data.games[0].privateItemIds.includes("776")&&!r.data.games[0].subscribedIds.includes("775"))','One confirmation installs the entire chosen tree, retains privacy, and omits optional branches');

@@ -24,3 +24,17 @@ test('temporary Steam errors are not misreported as an expired sign-in',async()=
 test('account changes during the preflight cannot send a subscription for the previous account',async()=>{
  let switched=false,writes=0;const steam=fixture(async()=>{switched=true;return response(profile);});steam.auth=async()=>({steamid:switched?OTHER:SELF,sessionid:'test'});steam.request=async()=>{writes++;};await assert.rejects(steam.mutate('subscribe',{id:'1',appid:'550'},SELF),error=>error.code==='STEAM_WEB_AUTH_REQUIRED');assert.equal(writes,0);
 });
+test('an opted-in renewal restores an expired cookie before requesting a new approval',async()=>{
+ let valid=false,renewals=0;const steam=fixture(async()=>response(valid?profile:'<div>Sign in</div>'));
+ steam.renewal={renew:async(_expected,options)=>{if(!options?.force)return false;valid=true;renewals++;return true;}};
+ await steam.ensureAuthorized(SELF);assert.equal(renewals,1);assert.equal(steam.authorizationFailure,null);
+});
+test('an authenticated 401 is retried once only after renewal and a fresh account check',async()=>{
+ let posts=0,renewals=0;const steam=fixture(async(_url,options)=>{if(options.method==='POST'){posts++;return posts===1?response('',401):{ok:true,status:200,json:async()=>({success:1})};}return response(profile);});
+ steam.renewal={renew:async(_expected,options)=>{if(!options?.force)return false;renewals++;return true;}};
+ assert.equal(await steam.mutate('subscribe',{id:'1',appid:'550'},SELF),true);assert.equal(posts,2);assert.equal(renewals,1);
+});
+test('a revoked renewal does not loop or repeat the unauthorized subscription',async()=>{
+ let posts=0;const steam=fixture(async(_url,options)=>{if(options.method==='POST'){posts++;return response('',401);}return response(profile);});steam.renewal={renew:async()=>false};
+ await assert.rejects(steam.mutate('subscribe',{id:'1',appid:'550'},SELF),error=>error.code==='STEAM_WEB_AUTH_REQUIRED');assert.equal(posts,1);
+});

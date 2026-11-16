@@ -59,6 +59,10 @@ contextBridge.exposeInMainWorld('workshop',{
    else if(type==='allowAutoSync')Blacklist.allow(g,p.ids);
    else if(type==='qaSteamResubscribe'){g.subscribedIds=Blacklist.observe(g,[...g.subscribedIds,p.id],{authoritative:true,checkedAt:Date.now()+3000});g.subscriptions.push({id:p.id,appid:g.id,title:'Reinstalled mod',type:0});}
    else if(type==='qaAutomaticCandidates')data=require('../src/core.cjs').eligible(p.ids.map(id=>({id,appid:g.id,type:0})),{...g,sync:true});
+   else if(type==='startSteamRenewal'){state.steamRenewal={enabled:true,configured:false,status:'waiting',qrExpiresAt:Date.now()+120000,qrImage:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'};data=state.steamRenewal;}
+   else if(type==='cancelSteamRenewal'){state.steamRenewal={enabled:true,configured:false,status:'needs-approval'};}
+   else if(type==='disableSteamRenewal'){state.steamRenewal={enabled:false,configured:false,status:'off'};}
+   else if(type==='qaApproveSteamRenewal'){state.steamRenewal={enabled:true,configured:true,status:'ready',lastRenewedAt:Date.now()};state.steamWebAuthorized=true;}
    else if(type==='qaEnableInstallReviews')state.qaInstallReviews=true;
    else if(type==='qaExpireNextInstall')state.qaExpireNextInstall=true;
    else if(type==='authorizeSteam')state.steamWebAuthorized=true;

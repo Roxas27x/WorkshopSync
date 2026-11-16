@@ -2,7 +2,7 @@
 
 WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop mods with friends. It works with subscriptions and named lists, without requiring Steam Collections or favorites.
 
-**Current desktop release: v0.10.3 · License: GPL-3.0-only**
+**Current desktop release: v0.10.4 · License: GPL-3.0-only**
 
 [Download the Windows installer](https://workshopsync.pages.dev/download) · [Releases](https://github.com/Roxas27x/WorkshopSync/releases) · [Player guide](workshop-link/README.md) · [Report a bug](https://github.com/Roxas27x/WorkshopSync/issues)
 
@@ -17,10 +17,19 @@ WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop
 - Read full mod descriptions in nested popups and review the nested requirement and recommendation tree in one step. Steam download authorization is checked before review and installation; reconnecting preserves your reviewed choices.
 - See download status, sizes, dates, and attribution. Sort by size to find large mods.
 - Delete selected mods with a separate confirmation. Deleted mods can be blacklisted from auto-sync; explicit reinstalls clear the blacklist when detected.
+- Optionally keep Steam download access signed in on this PC, with Steam Guard QR approval, Windows-encrypted credential storage, and automatic renewal.
 - Receive verified installer updates through the app and choose when to restart.
 - Use the Utility layout with multiple palettes and light, dark, or system appearance.
 
 Automatic synchronization is opt-in. Subscription sharing defaults on after connecting friends and can be configured per game and list. Author notes provide guidance; they do not prove that a set of mods is compatible.
+
+## Keep Steam signed in
+
+Open **Settings → Steam & friends** and enable **Keep me signed in on this PC**. Scan the QR code in the Steam mobile app’s Steam Guard screen and approve the same account connected to WorkshopSync. The desktop saves a reusable credential using Windows protected storage and obtains fresh Steam web cookies as needed. Setup is optional and off by default.
+
+Renewal runs when due at startup, periodically while the app is open, and when download authorization expires. A subscription rejected as unauthorized is retried once after successful renewal and a fresh account check. Temporary Steam failures back off; revoked or expired reusable credentials require a new approval. Turning the option off removes the saved credential while leaving the current browser session connected. Signing out or switching accounts also removes it.
+
+Steam renewal credentials stay on the player’s PC. They are excluded from list backups and are never sent to the friend-sharing service. Friend identity continues to use Steam OpenID; the local QR flow authorizes only the player’s own Steam website access. Steam controls credential lifetime and can require approval again.
 
 ## Repository layout
 
@@ -76,9 +85,9 @@ The UI check uses a separate sample profile and mocked Steam actions. Scripts na
 
 ## Release and privacy information
 
-The public repository contains the source for desktop v0.10.3, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
+The public repository contains the source for desktop v0.10.4, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
 
-Public service URLs and the public Ed25519 update-verification key are intentionally included. Private signing keys, Steam cookies, companion sessions, personal mod lists, deployed databases, logs, and hosting credentials are excluded. Publishing official updates still requires the authorized publisher account and its protected private signing key.
+Public service URLs and the public Ed25519 update-verification key are intentionally included. Private signing keys, Steam cookies, companion sessions, Steam renewal credentials, personal mod lists, deployed databases, logs, and hosting credentials are excluded. Publishing official updates still requires the authorized publisher account and its protected private signing key.
 
 The website is hosted on Cloudflare Pages. The friend-sync API and installer store are hosted separately on Railway. See [release information](docs/RELEASING.md) before producing a fork or operating an update service.
 

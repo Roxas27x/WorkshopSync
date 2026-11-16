@@ -15,6 +15,7 @@ workshop-sync-service/dist/
 **/.npmrc
 **/deployment.json
 **/companion-session.json
+**/steam-renewal.json*
 **/release-signing-key.json
 **/*.pem
 **/*.key

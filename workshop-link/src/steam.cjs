@@ -49,7 +49,12 @@ class Steam {
     if(!steamid) return null;
     return {steamid,sessionid};
   }
-  async ensureAuthorized(expectedAccount,{fresh=false}={}) {
+  async ensureAuthorized(expectedAccount,{fresh=false,allowRenew=true}={}) {
+    if(allowRenew&&this.renewal)await this.renewal.renew(expectedAccount);
+    try{return await this.checkAuthorized(expectedAccount,{fresh});}
+    catch(error){if(error.code==='STEAM_WEB_AUTH_REQUIRED'&&allowRenew&&this.renewal&&await this.renewal.renew(expectedAccount,{force:true}))return this.checkAuthorized(expectedAccount,{fresh:false});throw error;}
+  }
+  async checkAuthorized(expectedAccount,{fresh=false}={}) {
     let auth=await this.auth();
     const expired=()=>{this.authorizationFailure=expectedAccount;this.authorization=null;return steamAuthorizationRequired();};
     if(!auth||auth.steamid!==expectedAccount)throw expired();
@@ -65,10 +70,17 @@ class Steam {
     if(!['subscribe','unsubscribe'].includes(kind)) throw new Error('Unsupported Steam action.');
     id(params.id);gameId(params.appid);
     let auth=await this.auth();
+    if(!auth&&expectedAccount)auth=await this.ensureAuthorized(expectedAccount);
     if(!auth) throw steamAuthorizationRequired();
     if(expectedAccount && auth.steamid!==expectedAccount) throw new Error('The Steam account changed. Review your game sync choices again.');
     auth=await this.ensureAuthorized(expectedAccount||auth.steamid);
-    const data=await this.request(`https://steamcommunity.com/sharedfiles/${kind}/`,{...params,sessionid:auth.sessionid},true);
+    let data;
+    try{data=await this.request(`https://steamcommunity.com/sharedfiles/${kind}/`,{...params,sessionid:auth.sessionid},true);}
+    catch(error){
+      if(error.code!=='STEAM_WEB_AUTH_REQUIRED'||!this.renewal||!await this.renewal.renew(expectedAccount||auth.steamid,{force:true}))throw error;
+      auth=await this.ensureAuthorized(expectedAccount||auth.steamid,{fresh:true,allowRenew:false});
+      data=await this.request(`https://steamcommunity.com/sharedfiles/${kind}/`,{...params,sessionid:auth.sessionid},true);
+    }
     if(Number(data.success)!==1) throw new Error(`Steam declined this action (${data.success ?? 'unknown response'}). Check sign-in, ownership, and Workshop availability.`);
     return true;
   }
