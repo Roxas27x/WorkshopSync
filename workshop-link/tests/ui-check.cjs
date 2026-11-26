@@ -72,7 +72,9 @@ app.whenReady().then(async()=>{
  await run('document.querySelector(".backdrop").click()');await wait();
  await check('document.querySelector("#settings-content").dataset.settingsPage==="account"&&document.querySelector("[data-action=keepSteam]").checked&&document.querySelector("[data-action=setupSteamRenewal]")','Canceling QR approval returns to Settings and offers finishing setup');
  await run('document.querySelector("[data-action=setupSteamRenewal]").click()');await wait();
- await run('window.workshop.action("qaApproveSteamRenewal")');await wait();
+ await run('window.workshop.action("qaSteamCookieIncomplete")');await wait();
+ await check('document.querySelector(".modal").textContent.includes("approval is saved")&&document.querySelector("[data-action=retrySteamRenewal]")&&!document.querySelector(".modal [data-action=setupSteamRenewal]")','A Community-session problem preserves approval and offers retry without another QR');
+ await run('document.querySelector("[data-action=retrySteamRenewal]").click()');await wait();
  await check('document.querySelector("#settings-content").dataset.settingsPage==="account"&&document.querySelector("[data-action=keepSteam]").checked&&document.querySelector("#settings-content").textContent.includes("Automatic renewal is active.")','Steam approval activates automatic renewal and returns to the same Settings page');
  await fs.writeFile(path.resolve(__dirname,'../../ui-artifacts/keep-steam-settings.png'),(await win.webContents.capturePage()).toPNG());
  await run('document.querySelector("[data-action=keepSteam]").click()');await wait();

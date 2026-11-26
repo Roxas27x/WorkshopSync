@@ -62,6 +62,8 @@ contextBridge.exposeInMainWorld('workshop',{
    else if(type==='startSteamRenewal'){state.steamRenewal={enabled:true,configured:false,status:'waiting',qrExpiresAt:Date.now()+120000,qrImage:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'};data=state.steamRenewal;}
    else if(type==='cancelSteamRenewal'){state.steamRenewal={enabled:true,configured:false,status:'needs-approval'};}
    else if(type==='disableSteamRenewal'){state.steamRenewal={enabled:false,configured:false,status:'off'};}
+   else if(type==='qaSteamCookieIncomplete'){state.steamRenewal={enabled:true,configured:true,status:'retrying',errorCode:'STEAM_COMMUNITY_SESSION_INCOMPLETE',error:'Steam approved your account, but its Community session could not be completed. Retry the connection; your approval is saved.'};state.steamWebAuthorized=false;}
+   else if(type==='retrySteamRenewal'){state.steamRenewal={enabled:true,configured:true,status:'ready',lastRenewedAt:Date.now()};state.steamWebAuthorized=true;data=state.steamRenewal;}
    else if(type==='qaApproveSteamRenewal'){state.steamRenewal={enabled:true,configured:true,status:'ready',lastRenewedAt:Date.now()};state.steamWebAuthorized=true;}
    else if(type==='qaEnableInstallReviews')state.qaInstallReviews=true;
    else if(type==='qaExpireNextInstall')state.qaExpireNextInstall=true;

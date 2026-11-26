@@ -238,7 +238,7 @@ async function action(type,p={}){
  if(type==='startSteamRenewal'){await account();if(!steamAccount)throw new Error('Connect Steam & friends before enabling Keep me signed in.');return renewal.start(steamAccount);}
  if(type==='cancelSteamRenewal'){renewal.cancel();return renewal.snapshot(steamAccount);}
  if(type==='disableSteamRenewal'){await renewal.disable();emit();return snapshot();}
- if(type==='retrySteamRenewal'){await account();await renewal.renew(steamAccount,{force:true});await account();emit();return renewal.snapshot(steamAccount);}
+ if(type==='retrySteamRenewal'){await account();await renewal.renew(steamAccount,{force:true,retryNow:true});await account();emit();return renewal.snapshot(steamAccount);}
  if(type==='cancelConnection'){relay.pending=null;connectionError='';emit();return snapshot();}
  if(type==='itemDetails')return workshopDetails.get(id(p.id));
  if(type==='openItemPage'){await shell.openExternal('https://steamcommunity.com/sharedfiles/filedetails/?id='+id(p.id));return;}
@@ -359,7 +359,7 @@ if(!app.requestSingleInstanceLock())app.quit();else{
   if(old?.version===4&&!await fs.access(file()+'.v4-backup').then(()=>true,()=>false))await fs.copyFile(file(),file()+'.v4-backup');
   state=migrate(old,serviceConfig.url);
   steam=new Steam(session.fromPartition('persist:steam'));relay=new Relay(state.relay.url,{file:path.join(app.getPath('userData'),'companion-session.json'),safeStorage});await relay.load();if(relay.token)try{await relay.verifyIdentity();}catch(error){connectionError=error.message;}
-  renewal=new SteamRenewal({file:path.join(app.getPath('userData'),'steam-renewal.json'),storage:safeStorage,cookies:steam.ses.cookies,userAgent:steam.ses.getUserAgent(),verify:async expected=>{steam.authorization=null;await steam.ensureAuthorized(expected,{fresh:true,allowRenew:false});}});steam.renewal=renewal;renewal.on('state',emit);renewal.on('connected',()=>account().then(emit).catch(()=>{}));
+  renewal=new SteamRenewal({file:path.join(app.getPath('userData'),'steam-renewal.json'),storage:safeStorage,cookies:steam.ses.cookies,userAgent:steam.ses.getUserAgent(),verify:async expected=>{steam.authorization=null;await steam.ensureAuthorized(expected,{fresh:true,allowRenew:false});}});steam.renewal=renewal;renewal.on('state',emit);renewal.on('problem',problem=>{log(problem.message,'warning',{category:'sharing'});save().catch(()=>{});});renewal.on('connected',()=>account().then(emit).catch(()=>{}));
   const {autoUpdater}=require('electron-updater');
   const installed=app.isPackaged&&await fs.access(path.join(process.resourcesPath,'app-update.yml')).then(()=>true,()=>false);
   updates=new AppUpdates({currentVersion:app.getVersion(),config:updateConfig,nativeUpdater:autoUpdater,installed});updates.on('state',emit);

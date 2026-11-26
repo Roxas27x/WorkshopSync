@@ -23,9 +23,10 @@ test('saved credentials renew after a restart without a new QR approval',async t
 test('a QR approval for another account is rejected before cookie injection',async t=>{
  const f=await fixture(t);await f.renewal.start(SELF);const session=f.sessions.at(-1);session.owner=OTHER;session.emit('authenticated');await waitFor(()=>f.renewal.snapshot(SELF).status==='needs-approval');await f.renewal.serial;assert.equal(f.writes.length,0);assert.match(f.renewal.snapshot(SELF).error,/same Steam account/);assert.equal(JSON.parse(await fs.readFile(f.file,'utf8')).secret,null);
 });
-test('all response cookies are validated before any are installed',async t=>{
- const f=await fixture(t);f.exchange=async()=>[...cookies(SELF),'sessionid=bad; Domain=example.com'];await f.renewal.start(SELF);f.sessions.at(-1).emit('authenticated');await waitFor(()=>f.renewal.snapshot(SELF).status==='needs-approval');assert.equal(f.writes.length,0);assert.throws(()=>cookiePlan(cookies(OTHER),SELF),/same Steam account/);
+test('unrelated Steam website cookies do not reject an approved Community session',async t=>{
+ const f=await fixture(t);f.exchange=async()=>[...cookies(SELF),'steamLoginSecure=store-only-value; Domain=checkout.steampowered.com','sessionid=store-session; Domain=store.steamchina.com','steamRefresh_steam=login-only; Domain=login.steampowered.com'];await f.enroll();assert.equal(f.renewal.snapshot(SELF).status,'ready');assert.equal(f.writes.length,2);assert.ok(f.writes.every(cookie=>cookie.url==='https://steamcommunity.com'));assert.throws(()=>cookiePlan(cookies(OTHER),SELF),error=>error.accountMismatch===true);
 });
+
 test('concurrent renewal requests share one exchange',async t=>{
  const f=await fixture(t);await f.enroll();let release;const gate=new Promise(resolve=>{release=resolve;});f.exchange=async()=>{await gate;return cookies(SELF);};const before=f.sessions.length,p1=f.renewal.renew(SELF,{force:true}),p2=f.renewal.renew(SELF,{force:true});await waitFor(()=>f.sessions.length>before);assert.equal(f.sessions.length,before+1);release();assert.deepEqual(await Promise.all([p1,p2]),[true,true]);
 });
@@ -49,4 +50,17 @@ test('protected storage is required for enabling a reusable login',async t=>{
 });
 test('expired QR codes become a new-approval state without writes',async t=>{
  const f=await fixture(t);await f.renewal.start(SELF);f.sessions.at(-1).emit('timeout');await waitFor(()=>f.renewal.snapshot(SELF).status==='needs-approval');assert.equal(f.writes.length,0);assert.equal(f.renewal.snapshot(SELF).qrImage,null);
+});
+test('an incomplete Community session keeps the approved credential and can retry without another QR',async t=>{
+ const f=await fixture(t),problems=[];f.renewal.on('problem',problem=>problems.push(problem));f.exchange=async()=>[cookies(SELF)[0]];
+ await f.renewal.start(SELF);f.sessions.at(-1).emit('authenticated');await waitFor(()=>f.renewal.snapshot(SELF).status==='retrying');
+ const info=f.renewal.snapshot(SELF);assert.equal(info.configured,true);assert.equal(info.errorCode,'STEAM_COMMUNITY_SESSION_INCOMPLETE');assert.doesNotMatch(info.error,/different account|same Steam account/);assert.equal(f.writes.length,0);assert.ok(JSON.parse(await fs.readFile(f.file,'utf8')).secret);assert.ok(!JSON.stringify(problems).includes(TOKEN));
+ f.exchange=null;assert.equal(await f.renewal.renew(SELF,{force:true,retryNow:true}),true);assert.equal(f.renewal.snapshot(SELF).status,'ready');assert.equal(f.renewal.snapshot(SELF).errorCode,'');
+});
+test('malformed Community cookies report a session problem while valid different accounts remain rejected',()=>{
+ for(const value of ['steamLoginSecure=%; Domain=steamcommunity.com','steamLoginSecure=missing-owner; Domain=steamcommunity.com'])assert.throws(()=>cookiePlan([value,cookies(SELF)[1]],SELF),error=>error.code==='STEAM_COMMUNITY_SESSION_INCOMPLETE'&&!error.accountMismatch);
+ assert.throws(()=>cookiePlan([...cookies(SELF),cookies(OTHER)[0]],SELF),error=>error.accountMismatch===true);
+});
+test('an actually mismatched approved account is distinguished from cookie setup failures',async t=>{
+ const f=await fixture(t);await f.renewal.start(SELF);f.sessions.at(-1).owner=OTHER;f.sessions.at(-1).emit('authenticated');await waitFor(()=>f.renewal.snapshot(SELF).status==='needs-approval');assert.equal(f.renewal.snapshot(SELF).errorCode,'STEAM_ACCOUNT_MISMATCH');assert.equal(f.renewal.snapshot(SELF).configured,false);assert.equal(f.writes.length,0);
 });

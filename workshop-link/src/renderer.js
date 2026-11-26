@@ -35,6 +35,7 @@ async function handle(action,e){const g=current();if(storageActions.has(action))
  if(action==='cancelConnection'){await call('cancelConnection');close();return;}
  if(action==='authorizeSteam'){if($('#keep-steam-signed-in')?.checked){await beginSteamRenewal();return;}await call('authorizeSteam');close();return;}
  if(action==='setupSteamRenewal'){await beginSteamRenewal();return;}
+ if(action==='retrySteamRenewal'){const parent=$('.modal');const info=await call('retrySteamRenewal');if($('.modal')===parent&&parent?.dataset.steamRenewal)showSteamRenewal(info);return;}
  if(action==='keepSteam'){if(e.checked)await beginSteamRenewal();else{await call('disableSteamRenewal');refreshSettingsStatus();}return;}
  if(action==='shareApp'){modal('Share WorkshopSync',`<p>Send this permanent link to a friend. It always downloads the latest Windows installer.</p><label for="installer-link">Permanent installer link</label><input type="text" id="installer-link" readonly value="${esc(state.installerUrl)}"><p class="hint">Install once. Update checks are built in and run on startup and hourly while the app is open. Players choose when to restart and update.</p>`,'<button data-action="close">Close</button><button class="primary" data-action="copyInstallerLink">Copy installer link</button>');return;}
  if(action==='copyInstallerLink'){await call('copyInstallerLink',{},'Permanent installer link copied. Share it with a friend.');return;}
