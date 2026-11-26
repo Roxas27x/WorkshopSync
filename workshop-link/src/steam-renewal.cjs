@@ -33,6 +33,24 @@ function cookiePlan(values,expected){
  if(!communityLogin||!communitySession)throw cookieError();return plan;
 }
 
+async function installCommunityCookies(cookies,plan,checkpoint=()=>{}){
+ const authNames=['steamLoginSecure','sessionid'],fresh=new Map(plan.map(cookie=>[cookie.name,cookie])),updates=new Map();
+ const key=cookie=>[cookie.name,cookie.domain?'domain:'+cookie.domain.replace(/^\./,''):'host:steamcommunity.com',cookie.path||'/'].join('|');
+ // A host-only cookie and a domain cookie can coexist with the same name.
+ // Keep all existing Community authentication scopes consistent so neither
+ // account detection nor Steam's server can choose a stale value.
+ for(const name of authNames){
+  const previous=await cookies.get({name,domain:'steamcommunity.com'});
+  for(const old of previous){
+   if(old.name!==name||old.domain.replace(/^\./,'')!=='steamcommunity.com')continue;
+   const replacement={...fresh.get(name),url:'https://steamcommunity.com'+(old.path||'/'),path:old.path||'/'};
+   if(old.hostOnly)delete replacement.domain;else replacement.domain=old.domain;
+   updates.set(key(replacement),replacement);
+  }
+ }
+ for(const cookie of plan)updates.set(key(cookie),cookie);
+ for(const cookie of updates.values()){checkpoint();await cookies.set(cookie);}
+}
 class SteamRenewal extends EventEmitter{
  #refreshToken=null;
  constructor({file,storage,cookies,verify,userAgent,createSession=()=>new LoginSession(EAuthTokenPlatformType.WebBrowser,userAgent?{userAgent}:{}),makeQR=url=>{const qr=qrcode(0,'M');qr.addData(url);qr.make();return qr.createDataURL(5,12);},now=Date.now}){
@@ -76,7 +94,7 @@ class SteamRenewal extends EventEmitter{
  }
  async exchange(session,expected,generation){
   const values=await bounded(session.getWebCookies());this.current(generation);if(session.steamID?.getSteamID64()!==expected)throw accountError();const plan=cookiePlan(values,expected);
-  for(const cookie of plan){this.current(generation);await this.cookies.set(cookie);}
+  await installCommunityCookies(this.cookies,plan,()=>this.current(generation));
   this.current(generation);await this.cookies.flushStore();await this.verify(expected);this.current(generation);
   this.lastRenewedAt=this.now();this.nextRenewalAt=this.now()+6*60*60000;this.retryAt=0;await this.persist(generation);this.current(generation);this.status='ready';this.error='';this.errorCode='';this.changed();this.emit('connected');return true;
  }
@@ -96,4 +114,4 @@ class SteamRenewal extends EventEmitter{
   this.inflight=task;try{return await task;}finally{if(this.inflight===task)this.inflight=null;}
  }
 }
-module.exports={SteamRenewal,cookiePlan};
+module.exports={SteamRenewal,cookiePlan,installCommunityCookies};

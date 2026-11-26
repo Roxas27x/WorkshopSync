@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os'),{EventEmitter,once}=require('node:events');
-const {SteamRenewal,cookiePlan}=require('../src/steam-renewal.cjs');
+const {SteamRenewal,cookiePlan,installCommunityCookies}=require('../src/steam-renewal.cjs');
 const SELF='76561198000000001',OTHER='76561198000000002',TOKEN='test-only-refresh-credential';
 const cookies=owner=>[`steamLoginSecure=${encodeURIComponent(owner+'||test-only-web-token')}; Domain=.steamcommunity.com; Path=/; Secure; HttpOnly; SameSite=None`,'sessionid=test-only-csrf; Domain=.steamcommunity.com; Path=/; Secure'];
 const waitFor=async predicate=>{for(let i=0;i<1000;i++){if(predicate())return;await new Promise(resolve=>setTimeout(resolve,2));}assert.fail('Expected state transition did not complete');};
@@ -7,7 +7,7 @@ async function fixture(t){
  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'workshopsync-renewal-'));assert.ok(path.resolve(dir).startsWith(path.resolve(os.tmpdir())+path.sep));t.after(async()=>{await value.renewal.serial.catch(()=>{});await fs.rm(dir,{recursive:true,force:true,maxRetries:3,retryDelay:50});});
  const value={file:path.join(dir,'steam-renewal.json'),sessions:[],writes:[],clock:2000000000000,verifyCount:0};
  const storage={isAsyncEncryptionAvailable:async()=>true,encryptStringAsync:async plain=>Buffer.from('sealed:'+Buffer.from(plain).toString('base64')),decryptStringAsync:async bytes=>({result:Buffer.from(bytes.toString().slice(7),'base64').toString()})};value.storage=storage;
- const options={file:value.file,storage,cookies:{set:async cookie=>value.writes.push(cookie),flushStore:async()=>{}},verify:async expected=>{assert.equal(expected,SELF);value.verifyCount++;},now:()=>value.clock,makeQR:()=> 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==',createSession:()=>{
+ const options={file:value.file,storage,cookies:{get:async()=>[],set:async cookie=>value.writes.push(cookie),flushStore:async()=>{}},verify:async expected=>{assert.equal(expected,SELF);value.verifyCount++;},now:()=>value.clock,makeQR:()=> 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///w==',createSession:()=>{
   const session=new EventEmitter();session.steamID={getSteamID64:()=>session.owner||SELF};session.refreshToken=TOKEN;session.startWithQR=async()=>({qrChallengeUrl:'https://s.team/q/1/test-only-challenge'});session.cancelLoginAttempt=()=>{session.cancelled=true;};session.getWebCookies=async()=>value.exchange?value.exchange(session):cookies(session.owner||SELF);value.sessions.push(session);return session;
  }};value.options=options;value.renewal=new SteamRenewal(options);value.enroll=async()=>{await value.renewal.start(SELF);const ready=once(value.renewal,'connected');value.sessions.at(-1).emit('authenticated');await ready;};return value;
 }
@@ -63,4 +63,21 @@ test('malformed Community cookies report a session problem while valid different
 });
 test('an actually mismatched approved account is distinguished from cookie setup failures',async t=>{
  const f=await fixture(t);await f.renewal.start(SELF);f.sessions.at(-1).owner=OTHER;f.sessions.at(-1).emit('authenticated');await waitFor(()=>f.renewal.snapshot(SELF).status==='needs-approval');assert.equal(f.renewal.snapshot(SELF).errorCode,'STEAM_ACCOUNT_MISMATCH');assert.equal(f.renewal.snapshot(SELF).configured,false);assert.equal(f.writes.length,0);
+});
+test('renewal replaces both host-only and domain login scopes with the same fresh credentials',async()=>{
+ const previous=['steamLoginSecure','sessionid'].flatMap(name=>[{name,domain:'steamcommunity.com',hostOnly:true,path:'/',value:'stale-host'},{name,domain:'.steamcommunity.com',hostOnly:false,path:'/',value:'stale-domain'}]);
+ const writes=[],plan=cookiePlan(cookies(SELF),SELF),fresh=new Map(plan.map(cookie=>[cookie.name,cookie.value]));
+ await installCommunityCookies({get:async options=>previous.filter(cookie=>cookie.name===options.name),set:async cookie=>writes.push(cookie)},plan);
+ assert.equal(writes.length,4);for(const name of ['steamLoginSecure','sessionid']){const variants=writes.filter(cookie=>cookie.name===name);assert.equal(variants.length,2);assert.ok(variants.some(cookie=>!cookie.domain));assert.ok(variants.some(cookie=>cookie.domain));assert.ok(variants.every(cookie=>cookie.value===fresh.get(name)));}
+});
+test('cookie replacement leaves other Steam sites and unrelated cookies untouched',async()=>{
+ const writes=[],previous=[{name:'steamLoginSecure',domain:'store.steampowered.com',hostOnly:true,path:'/'},{name:'steamCountry',domain:'steamcommunity.com',hostOnly:true,path:'/'}];
+ await installCommunityCookies({get:async()=>previous,set:async cookie=>writes.push(cookie)},cookiePlan(cookies(SELF),SELF));assert.equal(writes.length,2);assert.ok(writes.every(cookie=>cookie.url==='https://steamcommunity.com'&&['steamLoginSecure','sessionid'].includes(cookie.name)));
+});
+test('existing authentication paths are renewed as well as the root cookie',async()=>{
+ const writes=[],previous=[{name:'steamLoginSecure',domain:'steamcommunity.com',hostOnly:true,path:'/my'},{name:'sessionid',domain:'.steamcommunity.com',hostOnly:false,path:'/sharedfiles'}];
+ await installCommunityCookies({get:async options=>previous.filter(cookie=>cookie.name===options.name),set:async cookie=>writes.push(cookie)},cookiePlan(cookies(SELF),SELF));assert.ok(writes.some(cookie=>cookie.url==='https://steamcommunity.com/my'&&cookie.path==='/my'));assert.ok(writes.some(cookie=>cookie.url==='https://steamcommunity.com/sharedfiles'&&cookie.path==='/sharedfiles'));assert.equal(writes.length,4);
+});
+test('cancelled renewal does not overwrite any stored cookie scopes',async()=>{
+ let writes=0;await assert.rejects(installCommunityCookies({get:async()=>[],set:async()=>{writes++;}},cookiePlan(cookies(SELF),SELF),()=>{throw Error('cancelled');}),/cancelled/);assert.equal(writes,0);
 });

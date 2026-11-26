@@ -2,7 +2,7 @@
 
 WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop mods with friends. It works with subscriptions and named lists, without requiring Steam Collections or favorites.
 
-**Current desktop release: v0.10.5 · License: GPL-3.0-only**
+**Current desktop release: v0.10.6 · License: GPL-3.0-only**
 
 [Download the Windows installer](https://workshopsync.pages.dev/download) · [Releases](https://github.com/Roxas27x/WorkshopSync/releases) · [Player guide](workshop-link/README.md) · [Report a bug](https://github.com/Roxas27x/WorkshopSync/issues)
 
@@ -29,7 +29,7 @@ Open **Settings → Steam & friends** and enable **Keep me signed in on this PC*
 
 Renewal runs when due at startup, periodically while the app is open, and when download authorization expires. A subscription rejected as unauthorized is retried once after successful renewal and a fresh account check. Temporary Steam failures back off; revoked or expired reusable credentials require a new approval. Turning the option off removes the saved credential while leaving the current browser session connected. Signing out or switching accounts also removes it.
 
-Steam renewal credentials stay on the player’s PC. They are excluded from list backups and are never sent to the friend-sharing service. Friend identity continues to use Steam OpenID; the local QR flow authorizes only the player’s own Steam website access. Steam controls credential lifetime and can require approval again. Version 0.10.5 imports only the Steam Community cookies needed for Workshop downloads, distinguishes actual account mismatches from session setup failures, and keeps an approved credential available for retry when session setup is incomplete.
+Steam renewal credentials stay on the player’s PC. They are excluded from list backups and are never sent to the friend-sharing service. Friend identity continues to use Steam OpenID; the local QR flow authorizes only the player’s own Steam website access. Steam controls credential lifetime and can require approval again. Version 0.10.5 imports only the Steam Community cookies needed for Workshop downloads, distinguishes actual account mismatches from session setup failures, and keeps an approved credential available for retry when session setup is incomplete. Version 0.10.6 also updates existing host-only and domain authentication cookie scopes together so stale cookies cannot shadow the renewed login.
 
 ## Repository layout
 
@@ -85,7 +85,7 @@ The UI check uses a separate sample profile and mocked Steam actions. Scripts na
 
 ## Release and privacy information
 
-The public repository contains the source for desktop v0.10.5, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
+The public repository contains the source for desktop v0.10.6, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
 
 Public service URLs and the public Ed25519 update-verification key are intentionally included. Private signing keys, Steam cookies, companion sessions, Steam renewal credentials, personal mod lists, deployed databases, logs, and hosting credentials are excluded. Publishing official updates still requires the authorized publisher account and its protected private signing key.
 
