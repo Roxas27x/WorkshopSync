@@ -12,7 +12,7 @@ WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop
 
 - Browse connected Steam friends' shared subscriptions and named mod lists, grouped by game.
 - Choose individual friends or groups, share separate named lists, and opt into automatic downloads per game.
-- Search Steam Workshop inside the app, with most subscribed results loaded automatically and game-specific type filters. Next and Previous open each result page at the top.
+- Search Steam Workshop inside the app, with most subscribed results loaded automatically and game-specific type filters. Previous and Next controls appear above and below the results and open each page at the top.
 - Subscribe privately, subscribe and share, or save items to a list.
 - Read full mod descriptions in nested popups and review the nested requirement and recommendation tree in one step. Steam download authorization is checked before review and installation; reconnecting preserves your reviewed choices.
 - See download status, sizes, dates, and attribution. Sort by size to find large mods.
