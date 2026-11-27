@@ -14,14 +14,14 @@ function workshopView(){
  const pagination=data?.pages>1?`<div class="workshop-pagination"><button class="small" data-action="workshopPage" data-page="${data.page-1}" ${entry.loading||data.page<=1?'disabled':''}>← Previous</button><span>Page ${data.page} of ${data.pages}</span><button class="small" data-action="workshopPage" data-page="${data.page+1}" ${entry.loading||data.page>=data.pages?'disabled':''}>Next →</button></div>`:'';
  return form+hint+(entry.error?`<p class="callout bad" role="alert">${esc(entry.error)}${data?' Your previous results are still shown below.':''}</p>`:'')+header+bulkActions+cards+pagination;
 }
-async function searchWorkshop(page=1){
- const gid=game,entry=workshopEntry(gid);
+async function searchWorkshop(page=1,{scrollToTop=false}={}){
+ const gid=game,entry=workshopEntry(gid);let pageLoaded=false;
  const query=page===1?entry.draft:entry.data.query,sort=page===1?entry.sort:entry.data.sort;
  const tag=page===1?entry.tag:entry.data.tag||'',requestKey=JSON.stringify([query,sort,page,tag]);if(entry.loading&&entry.requestKey===requestKey)return;
  entry.draft=query;entry.sort=sort;entry.tag=tag;entry.loading=true;entry.requestKey=requestKey;entry.error='';const serial=++entry.serial;selected.clear();render();
- try{const result=await call('workshopSearch',{game:gid,query,sort,page,tag});if(entry.serial===serial)entry.data=result;}
+ try{const result=await call('workshopSearch',{game:gid,query,sort,page,tag});if(entry.serial===serial){entry.data=result;pageLoaded=true;}}
  catch(error){if(entry.serial===serial)entry.error=error.message;}
- finally{if(entry.serial===serial)entry.loading=false;if(game===gid)render();}
+ finally{if(entry.serial===serial)entry.loading=false;if(game===gid){render();if(pageLoaded&&scrollToTop&&tab==='workshop')$('#main').scrollTop=0;}}
 }
 function workshopPicked(e){return e.dataset.id?[e.dataset.id]:[...selected];}
 function showWorkshopShare(ids){
@@ -32,7 +32,7 @@ function showWorkshopShare(ids){
 }
 async function handleWorkshopAction(action,e){
  if(action==='workshopSearch'){await searchWorkshop();return;}
- if(action==='workshopPage'){await searchWorkshop(Number(e.dataset.page));return;}
+ if(action==='workshopPage'){await searchWorkshop(Number(e.dataset.page),{scrollToTop:true});return;}
  if(action==='openWorkshop'){const entry=workshopEntry();await call('openWorkshop',{game,query:entry.draft,sort:entry.sort,tag:entry.tag,page:1});return;}
  const ids=action==='workshopConfirmShare'?JSON.parse($('.modal').dataset.workshopIds):workshopPicked(e);if(!ids.length)throw new Error('Select Workshop items first.');
  if(action==='workshopShare'){showWorkshopShare(ids);return;}

@@ -2,7 +2,7 @@
 
 WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop mods with friends. It works with subscriptions and named lists, without requiring Steam Collections or favorites.
 
-**Current desktop release: v0.10.6 · License: GPL-3.0-only**
+**Current desktop release: v0.10.7 · License: GPL-3.0-only**
 
 [Download the Windows installer](https://workshopsync.pages.dev/download) · [Releases](https://github.com/Roxas27x/WorkshopSync/releases) · [Player guide](workshop-link/README.md) · [Report a bug](https://github.com/Roxas27x/WorkshopSync/issues)
 
@@ -12,7 +12,7 @@ WorkshopSync is a Windows companion for sharing and synchronizing Steam Workshop
 
 - Browse connected Steam friends' shared subscriptions and named mod lists, grouped by game.
 - Choose individual friends or groups, share separate named lists, and opt into automatic downloads per game.
-- Search Steam Workshop inside the app, with most subscribed results loaded automatically and game-specific type filters.
+- Search Steam Workshop inside the app, with most subscribed results loaded automatically and game-specific type filters. Next and Previous open each result page at the top.
 - Subscribe privately, subscribe and share, or save items to a list.
 - Read full mod descriptions in nested popups and review the nested requirement and recommendation tree in one step. Steam download authorization is checked before review and installation; reconnecting preserves your reviewed choices.
 - See download status, sizes, dates, and attribution. Sort by size to find large mods.
@@ -85,7 +85,7 @@ The UI check uses a separate sample profile and mocked Steam actions. Scripts na
 
 ## Release and privacy information
 
-The public repository contains the source for desktop v0.10.6, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
+The public repository contains the source for desktop v0.10.7, the sync server, and the website. The [runtime source manifest](docs/runtime-source-v0.10.0.json) records the exact runtime files used for the existing official installer. Version 0.10.1 added GPL notices, documentation, and license packaging without changing those runtime files. Version 0.10.2 fixes friend discovery when a saved Steam Community session expires and prevents failed friend refreshes from erasing the published roster.
 
 Public service URLs and the public Ed25519 update-verification key are intentionally included. Private signing keys, Steam cookies, companion sessions, Steam renewal credentials, personal mod lists, deployed databases, logs, and hosting credentials are excluded. Publishing official updates still requires the authorized publisher account and its protected private signing key.
 
